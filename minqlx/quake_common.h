@@ -1499,6 +1499,8 @@ typedef void (__cdecl *Sys_SetModuleOffset_ptr)(char* moduleName, void* offset);
 typedef void (__cdecl *SV_LinkEntity_ptr)(sharedEntity_t* gEnt);
 typedef void (__cdecl *SV_SpawnServer_ptr)(char* server, qboolean killBots);
 typedef void (__cdecl *Cmd_ExecuteString_ptr)(const char* text);
+typedef int (__cdecl *SV_BotAllocateClient_ptr)(void);
+typedef void (__cdecl *SV_BotFreeClient_ptr)(int clientNum);
 // VM functions.
 typedef void (__cdecl *G_RunFrame_ptr)(int time);
 typedef void (__cdecl *G_AddEvent_ptr)(gentity_t* ent, int event, int eventParm);
@@ -1538,6 +1540,8 @@ extern SV_DropClient_ptr SV_DropClient;
 extern Sys_SetModuleOffset_ptr Sys_SetModuleOffset;
 extern SV_SpawnServer_ptr SV_SpawnServer;
 extern Cmd_ExecuteString_ptr Cmd_ExecuteString;
+extern SV_BotAllocateClient_ptr SV_BotAllocateClient;
+extern SV_BotFreeClient_ptr SV_BotFreeClient;
 // VM functions.
 extern G_RunFrame_ptr G_RunFrame;
 extern G_AddEvent_ptr G_AddEvent;

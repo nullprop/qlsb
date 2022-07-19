@@ -334,6 +334,32 @@ static PyObject* PyMinqlx_GetUserinfo(PyObject* self, PyObject* args) {
 
 /*
  * ================================================================
+ *                          bot_allocate_client
+ * ================================================================
+*/
+
+static PyObject* PyMinqlx_BotAllocateClient(PyObject* self, PyObject* args) {
+    int id = SV_BotAllocateClient();
+    return PyLong_FromLongLong(id);
+}
+
+/*
+ * ================================================================
+ *                          bot_free_client
+ * ================================================================
+*/
+
+static PyObject* PyMinqlx_BotFreeClient(PyObject* self, PyObject* args) {
+    int i;
+    if (!PyArg_ParseTuple(args, "i:bot_free_client", &i))
+        return NULL;
+
+    SV_BotFreeClient(i);
+    Py_RETURN_NONE;
+}
+
+/*
+ * ================================================================
  *                       send_server_command
  * ================================================================
 */
@@ -1692,6 +1718,10 @@ static PyMethodDef minqlxMethods[] = {
 	 "Returns a list with dictionaries with information about all the players on the server."},
 	{"get_userinfo", PyMinqlx_GetUserinfo, METH_VARARGS,
 	 "Returns a string with a player's userinfo."},
+    {"bot_allocate_client", PyMinqlx_BotAllocateClient, METH_NOARGS,
+	 "Try to allocate a client entity. Returns -1 on failure."},
+    {"bot_free_client", PyMinqlx_BotAllocateClient, METH_VARARGS,
+	 "Free a client entity by id."},
     {"send_server_command", PyMinqlx_SendServerCommand, METH_VARARGS,
      "Sends a server command to either one specific client or all the clients."},
 	{"client_command", PyMinqlx_ClientCommand, METH_VARARGS,

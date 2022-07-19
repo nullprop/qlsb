@@ -25,13 +25,31 @@ import minqlx
 from pprint import pprint
 
 
-class client_think_test(minqlx.Plugin):
+class bot_test(minqlx.Plugin):
+    client_num = -1
+
     def __init__(self):
         super().__init__()
         self.add_hook("client_think", self.handle_client_think)
+        self.allocate()
 
     def handle_client_think(self, player, client_cmd):
-        #client_cmd["forwardmove"] = 127
-        print("client cmd player {}:".format(player.name))
-        pprint(client_cmd)
+        # client_cmd["forwardmove"] = 127
+        # print("client cmd player {}:".format(player.name))
+        # pprint(client_cmd)
         return client_cmd
+
+    @minqlx.delay(5)
+    def allocate(self):
+        self.client_num = minqlx.bot_allocate_client()
+        print("allocated client {}".format(self.client_num))
+        self.free()
+
+    @minqlx.delay(5)
+    def free(self):
+        if self.client_num >= 0:
+            minqlx.bot_free_client(self.client_num)
+            print("freed client {}".format(self.client_num))
+            self.client_num = -1
+        else:
+            print("no client to free")
