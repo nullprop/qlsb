@@ -158,7 +158,6 @@ void ClientThinkDispatcher(int client_id, usercmd_t* cmd) {
 
 	PyGILState_STATE gstate = PyGILState_Ensure();
 
-    DebugPrint("angles sent: %f, %f, %f\n", SHORT2ANGLE(cmd->angles[0]), SHORT2ANGLE(cmd->angles[1]), SHORT2ANGLE(cmd->angles[2]));
 	PyObject* result = PyObject_CallFunction(
         client_think_handler,
         "iifffibbbbbb",
