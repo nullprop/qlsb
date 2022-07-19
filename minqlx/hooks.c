@@ -198,6 +198,11 @@ void __cdecl My_SV_ClientEnterWorld(client_t* client, usercmd_t* cmd) {
 	}
 }
 
+void __cdecl My_SV_ClientThink(client_t* client, usercmd_t* cmd) {
+    ClientThinkDispatcher(client - svs->clients, cmd);
+	SV_ClientThink(client, cmd);
+}
+
 void __cdecl My_SV_SetConfigstring(int index, char* value) {
     // Indices 16 and 66X are spammed a ton every frame for some reason,
     // so we add some exceptions for those. I don't think we should have any
@@ -326,6 +331,12 @@ void HookStatic(void) {
     res = Hook((void*)SV_ClientEnterWorld, My_SV_ClientEnterWorld, (void*)&SV_ClientEnterWorld);
 	if (res) {
 		DebugPrint("ERROR: Failed to hook SV_ClientEnterWorld: %d\n", res);
+		failed = 1;
+	}
+
+    res = Hook((void*)SV_ClientThink, My_SV_ClientThink, (void*)&SV_ClientThink);
+	if (res) {
+		DebugPrint("ERROR: Failed to hook SV_ClientThink: %d\n", res);
 		failed = 1;
 	}
 

@@ -116,6 +116,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define DAMAGE_NO_PROTECTION 0x00000008
 
+// angle helpers
+#define	ANGLE2SHORT(x)	((int)((x)*65536/360) & 65535)
+#define	SHORT2ANGLE(x)	((x)*(360.0/65536))
+
 typedef enum {qfalse, qtrue} qboolean;
 typedef unsigned char byte;
 
@@ -1483,6 +1487,7 @@ typedef cvar_t* (__cdecl *Cvar_Set2_ptr)(const char* var_name, const char* value
 typedef void (__cdecl *SV_SendServerCommand_ptr)(client_t* cl, const char* fmt, ...);
 typedef void (__cdecl *SV_ExecuteClientCommand_ptr)(client_t* cl, const char* s, qboolean clientOK);
 typedef void (__cdecl *SV_ClientEnterWorld_ptr)(client_t *client, usercmd_t *cmd);
+typedef void (__cdecl *SV_ClientThink_ptr)(client_t *client, usercmd_t *cmd);
 typedef void (__cdecl *SV_Shutdown_ptr)(char* finalmsg);
 typedef void (__cdecl *SV_Map_f_ptr)(void);
 typedef void (__cdecl *SV_ClientThink_ptr)(client_t* cl, usercmd_t* cmd);
@@ -1524,6 +1529,7 @@ extern Cvar_Set2_ptr Cvar_Set2;
 extern SV_SendServerCommand_ptr SV_SendServerCommand;
 extern SV_ExecuteClientCommand_ptr SV_ExecuteClientCommand;
 extern SV_ClientEnterWorld_ptr SV_ClientEnterWorld;
+extern SV_ClientThink_ptr SV_ClientThink;
 extern SV_Shutdown_ptr SV_Shutdown; // Used to get svs pointer.
 extern SV_Map_f_ptr SV_Map_f; // Used to get Cmd_Argc
 extern SV_SetConfigstring_ptr SV_SetConfigstring;
@@ -1554,6 +1560,7 @@ void __cdecl My_Sys_SetModuleOffset(char* moduleName, void* offset);
 void __cdecl My_SV_ExecuteClientCommand(client_t *cl, char *s, qboolean clientOK);
 void __cdecl My_SV_SendServerCommand(client_t* cl, char* fmt, ...);
 void __cdecl My_SV_ClientEnterWorld(client_t* client, usercmd_t* cmd);
+void __cdecl My_SV_ClientThink(client_t* client, usercmd_t* cmd);
 void __cdecl My_SV_SetConfigstring(int index, char* value);
 void __cdecl My_SV_DropClient(client_t* drop, const char* reason);
 void __cdecl My_Com_Printf(char* fmt, ...);

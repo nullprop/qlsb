@@ -45,6 +45,7 @@ Cvar_Set2_ptr Cvar_Set2;
 SV_SendServerCommand_ptr SV_SendServerCommand;
 SV_ExecuteClientCommand_ptr SV_ExecuteClientCommand;
 SV_ClientEnterWorld_ptr SV_ClientEnterWorld;
+SV_ClientThink_ptr SV_ClientThink;
 SV_Shutdown_ptr SV_Shutdown;
 SV_Map_f_ptr SV_Map_f;
 SV_SetConfigstring_ptr SV_SetConfigstring;
@@ -124,6 +125,7 @@ static void SearchFunctions(void) {
 	STATIC_SEARCH(SV_Shutdown, PTRN_SV_SHUTDOWN, MASK_SV_SHUTDOWN);
 	STATIC_SEARCH(SV_Map_f, PTRN_SV_MAP_F, MASK_SV_MAP_F);
 	STATIC_SEARCH(SV_ClientEnterWorld, PTRN_SV_CLIENTENTERWORLD, MASK_SV_CLIENTENTERWORLD);
+	STATIC_SEARCH(SV_ClientThink, PTRN_SV_CLIENTTHINK, MASK_SV_CLIENTTHINK);
 	STATIC_SEARCH(SV_SetConfigstring, PTRN_SV_SETCONFIGSTRING, MASK_SV_SETCONFIGSTRING);
 	STATIC_SEARCH(SV_GetConfigstring, PTRN_SV_GETCONFIGSTRING, MASK_SV_GETCONFIGSTRING);
 	STATIC_SEARCH(SV_DropClient, PTRN_SV_DROPCLIENT, MASK_SV_DROPCLIENT);

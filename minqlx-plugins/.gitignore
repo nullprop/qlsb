@@ -20,3 +20,4 @@ minqlx
 # qlsb
 !race.py
 !solorace.py
+!client_think_test.py

@@ -52,6 +52,7 @@ extern PyObject* server_command_handler;
 extern PyObject* client_connect_handler;
 extern PyObject* client_loaded_handler;
 extern PyObject* client_disconnect_handler;
+extern PyObject* client_think_handler;
 extern PyObject* frame_handler;
 extern PyObject* new_game_handler;
 extern PyObject* set_configstring_handler;

@@ -401,6 +401,29 @@ def handle_player_spawn(client_id):
         minqlx.log_exception()
         return True
 
+def handle_client_think(client_id, server_time, pitch, yaw, roll, buttons, weapon, weapon_primary, fov, forwardmove, rightmove, upmove):
+    """Called on client think. Hook should return client_cmd dict.
+    """
+    try:
+        player = minqlx.Player(client_id)
+        client_cmd = {
+            "server_time": server_time,
+            "pitch": pitch,
+            "yaw": yaw,
+            "roll": roll,
+            "buttons": buttons,
+            "weapon": weapon,
+            "weapon_primary": weapon_primary,
+            "fov": fov,
+            "forwardmove": forwardmove,
+            "rightmove": rightmove,
+            "upmove": upmove,
+        }
+        return minqlx.EVENT_DISPATCHERS["client_think"].dispatch(player, client_cmd)
+    except:
+        minqlx.log_exception()
+        return True
+
 def handle_kamikaze_use(client_id):
     """This will be called whenever player uses kamikaze item.
 
@@ -506,6 +529,7 @@ def register_handlers():
     minqlx.register_handler("player_loaded", handle_player_loaded)
     minqlx.register_handler("player_disconnect", handle_player_disconnect)
     minqlx.register_handler("player_spawn", handle_player_spawn)
+    minqlx.register_handler("client_think", handle_client_think)
     minqlx.register_handler("console_print", handle_console_print)
 
     minqlx.register_handler("kamikaze_use", handle_kamikaze_use)

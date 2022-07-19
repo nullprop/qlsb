@@ -16,6 +16,7 @@ PyObject* server_command_handler = NULL;
 PyObject* client_connect_handler = NULL;
 PyObject* client_loaded_handler = NULL;
 PyObject* client_disconnect_handler = NULL;
+PyObject* client_think_handler = NULL;
 PyObject* frame_handler = NULL;
 PyObject* custom_command_handler = NULL;
 PyObject* new_game_handler = NULL;
@@ -61,6 +62,7 @@ static handler_t handlers[] = {
 		{"player_connect", 		&client_connect_handler},
 		{"player_loaded", 		&client_loaded_handler},
 		{"player_disconnect", 	&client_disconnect_handler},
+		{"client_think", 	    &client_think_handler},
 		{"custom_command", 		&custom_command_handler},
 		{"new_game",			&new_game_handler},
 		{"set_configstring", 	&set_configstring_handler},

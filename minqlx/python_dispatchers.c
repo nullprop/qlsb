@@ -152,6 +152,64 @@ int ClientLoadedDispatcher(int client_id) {
 	return ret;
 }
 
+void ClientThinkDispatcher(int client_id, usercmd_t* cmd) {
+	if (!client_think_handler)
+		return; // No registered handler.
+
+	PyGILState_STATE gstate = PyGILState_Ensure();
+
+    DebugPrint("angles sent: %f, %f, %f\n", SHORT2ANGLE(cmd->angles[0]), SHORT2ANGLE(cmd->angles[1]), SHORT2ANGLE(cmd->angles[2]));
+	PyObject* result = PyObject_CallFunction(
+        client_think_handler,
+        "iifffibbbbbb",
+        client_id,
+        cmd->serverTime,
+        SHORT2ANGLE(cmd->angles[0]),
+        SHORT2ANGLE(cmd->angles[1]),
+        SHORT2ANGLE(cmd->angles[2]),
+        cmd->buttons,
+        cmd->weapon,
+        cmd->weaponPrimary,
+        cmd->fov,
+        cmd->forwardmove,
+        cmd->rightmove,
+        cmd->upmove
+    );
+
+	// Only change to 0 if we got False returned to us.
+	if (result == NULL) {
+		DebugError("PyObject_CallFunction() returned NULL.\n",
+				__FILE__, __LINE__, __func__);
+		PyGILState_Release(gstate);
+		return;
+	}
+
+	if (!PyDict_Check(result)) {
+		DebugError("PyObject_CallFunction() expected dict.\n",
+				__FILE__, __LINE__, __func__);
+        Py_XDECREF(result);
+		PyGILState_Release(gstate);
+		return;
+	}
+
+    // TODO: error check dict contents
+
+    cmd->serverTime     = (int)PyLong_AsLong(PyDict_GetItemString(result, "server_time"));
+    cmd->angles[0]      = ANGLE2SHORT(PyFloat_AsDouble(PyDict_GetItemString(result, "pitch")));
+    cmd->angles[1]      = ANGLE2SHORT(PyFloat_AsDouble(PyDict_GetItemString(result, "yaw")));
+    cmd->angles[2]      = ANGLE2SHORT(PyFloat_AsDouble(PyDict_GetItemString(result, "roll")));
+    cmd->buttons        = (int)PyLong_AsLong(PyDict_GetItemString(result, "buttons"));
+    cmd->weapon         = (byte)PyLong_AsLong(PyDict_GetItemString(result, "weapon"));
+    cmd->weaponPrimary  = (byte)PyLong_AsLong(PyDict_GetItemString(result, "weapon_primary"));
+    cmd->fov            = (byte)PyLong_AsLong(PyDict_GetItemString(result, "fov"));
+    cmd->forwardmove    = (char)PyLong_AsLong(PyDict_GetItemString(result, "forwardmove"));
+    cmd->rightmove      = (char)PyLong_AsLong(PyDict_GetItemString(result, "rightmove"));
+    cmd->upmove         = (char)PyLong_AsLong(PyDict_GetItemString(result, "upmove"));
+
+    Py_XDECREF(result);
+	PyGILState_Release(gstate);
+}
+
 void NewGameDispatcher(int restart) {
 	if (!new_game_handler)
 		return; // No registered handler.
