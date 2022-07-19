@@ -334,6 +334,30 @@ static PyObject* PyMinqlx_GetUserinfo(PyObject* self, PyObject* args) {
 
 /*
  * ================================================================
+ *                          bot_add
+ * ================================================================
+*/
+
+static PyObject* PyMinqlx_BotAdd(PyObject* self, PyObject* args) {
+    int id = SV_BotAllocateClient();
+
+    if (id >= 0) {
+        gentity_t *bot = &g_entities[id];
+        bot->r.svFlags |= SVF_BOT;
+        bot->inuse = 1;
+        char *info = "name\\TestBot\\rate\\25000\\handicap\\0"
+            "\\model\\crash/red\\headmodel\\crash/red\\sex\\female\\color1\\4"
+            "\\skill\\0\\team\\red";
+        strcpy(svs->clients[id].userinfo, info);
+        ClientConnect(id, 1, 0);
+        ClientBegin(id);
+    }
+
+    return PyLong_FromLongLong(id);
+}
+
+/*
+ * ================================================================
  *                          bot_allocate_client
  * ================================================================
 */
@@ -1718,6 +1742,8 @@ static PyMethodDef minqlxMethods[] = {
 	 "Returns a list with dictionaries with information about all the players on the server."},
 	{"get_userinfo", PyMinqlx_GetUserinfo, METH_VARARGS,
 	 "Returns a string with a player's userinfo."},
+    {"bot_add", PyMinqlx_BotAdd, METH_NOARGS,
+	 "Try to add and spawn a bot client. Returns -1 on failure."},
     {"bot_allocate_client", PyMinqlx_BotAllocateClient, METH_NOARGS,
 	 "Try to allocate a client entity. Returns -1 on failure."},
     {"bot_free_client", PyMinqlx_BotAllocateClient, METH_VARARGS,

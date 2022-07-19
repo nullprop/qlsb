@@ -120,6 +120,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define	ANGLE2SHORT(x)	((int)((x)*65536/360) & 65535)
 #define	SHORT2ANGLE(x)	((x)*(360.0/65536))
 
+// entity->svFlags
+// the server does not know how to interpret most of the values
+// in entityStates (level eType), so the game must explicitly flag
+// special server behaviors
+#define	SVF_NOCLIENT			0x00000001	// don't send entity to clients, even if it has effects
+// TTimo
+// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=551
+#define SVF_CLIENTMASK 0x00000002
+#define SVF_BOT					0x00000008	// set if the entity is a bot
+#define	SVF_BROADCAST			0x00000020	// send to all connected clients
+#define	SVF_PORTAL				0x00000040	// merge a second pvs at origin2 into snapshots
+#define	SVF_USE_CURRENT_ORIGIN	0x00000080	// entity->r.currentOrigin instead of entity->s.origin
+											// for link position (missiles and movers)
+#define SVF_SINGLECLIENT		0x00000100	// only send to a single client (entityShared_t->singleClient)
+#define SVF_NOSERVERINFO		0x00000200	// don't send CS_SERVERINFO updates to this client
+											// so that it can be updated for ping tools without
+											// lagging clients
+#define SVF_CAPSULE				0x00000400	// use capsule for collision detection instead of bbox
+#define SVF_NOTSINGLECLIENT		0x00000800	// send entity to everyone but one client
+											// (entityShared_t->singleClient)
+
 typedef enum {qfalse, qtrue} qboolean;
 typedef unsigned char byte;
 
@@ -1508,6 +1529,7 @@ typedef void (__cdecl *G_InitGame_ptr)(int levelTime, int randomSeed, int restar
 typedef int (__cdecl *CheckPrivileges_ptr)(gentity_t* ent, char* cmd);
 typedef char* (__cdecl *ClientConnect_ptr)(int clientNum, qboolean firstTime, qboolean isBot);
 typedef void (__cdecl *ClientSpawn_ptr)(gentity_t* ent);
+typedef void (__cdecl *ClientBegin_ptr)(int clientNum);
 typedef void (__cdecl *Cmd_CallVote_f_ptr)(gentity_t *ent);
 typedef void (__cdecl *G_Damage_ptr)(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, int mod);
 typedef void (__cdecl *Touch_Item_ptr)(gentity_t *ent, gentity_t *other, trace_t *trace);
@@ -1549,6 +1571,7 @@ extern G_InitGame_ptr G_InitGame;
 extern CheckPrivileges_ptr CheckPrivileges;
 extern ClientConnect_ptr ClientConnect;
 extern ClientSpawn_ptr ClientSpawn;
+extern ClientBegin_ptr ClientBegin;
 extern Cmd_CallVote_f_ptr Cmd_CallVote_f;
 extern G_Damage_ptr G_Damage;
 extern Touch_Item_ptr Touch_Item;

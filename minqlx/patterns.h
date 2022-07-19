@@ -108,8 +108,9 @@
 #define OFFSET_RELP_SV     ((pint)SV_SetConfigstring + 0xB4)
 
 // VM_Call table offsets.
-#define RELOFFSET_VM_CALL_INITGAME   0x18
-#define RELOFFSET_VM_CALL_RUNFRAME   0x8
+#define RELOFFSET_VM_CALL_INITGAME    0x18
+#define RELOFFSET_VM_CALL_RUNFRAME    0x8
+#define RELOFFSET_VM_CALL_CLIENTBEGIN 0x0 // TODO
 
 #elif defined(__i386) || defined(_M_IX86)
 

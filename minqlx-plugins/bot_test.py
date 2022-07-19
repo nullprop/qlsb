@@ -31,13 +31,25 @@ class bot_test(minqlx.Plugin):
     def __init__(self):
         super().__init__()
         self.add_hook("client_think", self.handle_client_think)
-        self.allocate()
+        # self.allocate()
+        self.add()
+        # self.add_command("testbot", self.cmd_add)
 
     def handle_client_think(self, player, client_cmd):
         # client_cmd["forwardmove"] = 127
         # print("client cmd player {}:".format(player.name))
         # pprint(client_cmd)
         return client_cmd
+    
+    def cmd_add(self, player, msg, channel):
+        self.client_num = minqlx.bot_add()
+        print("bot_add: {}".format(self.client_num))
+        player.tell("bot_add: {}".format(self.client_num))
+
+    @minqlx.delay(3)
+    def add(self):
+        self.client_num = minqlx.bot_add()
+        print("bot_add: {}".format(self.client_num))
 
     @minqlx.delay(5)
     def allocate(self):

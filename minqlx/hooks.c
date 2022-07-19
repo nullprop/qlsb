@@ -175,6 +175,7 @@ void __cdecl My_SV_SendServerCommand(client_t* cl, char* fmt, ...) {
 	va_end(argptr);
 
     char* res = buffer;
+    DebugPrint("SSC: %s\n", res); // DEBUG VM PRINTS
 	if (cl && cl->gentity)
 		res = ServerCommandDispatcher(cl - svs->clients, buffer);
 	else if (cl == NULL)
@@ -401,6 +402,8 @@ void HookVm(void) {
 	*(void**)(vm_call_table + RELOFFSET_VM_CALL_INITGAME) = My_G_InitGame;
 
 	G_RunFrame = *(G_RunFrame_ptr*)(vm_call_table + RELOFFSET_VM_CALL_RUNFRAME);
+
+	ClientBegin = *(ClientBegin_ptr*)(vm_call_table + RELOFFSET_VM_CALL_CLIENTBEGIN);
 
 #ifndef NOPY
 	*(void**)(vm_call_table + RELOFFSET_VM_CALL_RUNFRAME) = My_G_RunFrame;
