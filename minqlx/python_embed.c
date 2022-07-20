@@ -382,6 +382,7 @@ static PyObject *PyMinqlx_ClientThink(PyObject *self, PyObject *args)
 
     // Needed to avoid timeout
     svs->clients[client_id].lastPacketTime = svs->time;
+    svs->clients[client_id]._unknownTime = svs->time; // TODO needed?
 
     My_SV_ClientThink(&svs->clients[client_id], &cmd);
     Py_RETURN_TRUE;
@@ -394,6 +395,7 @@ static PyObject *PyMinqlx_ClientThink(PyObject *self, PyObject *args)
 */
 
 static PyObject* PyMinqlx_BotAdd(PyObject* self, PyObject* args) {
+    DebugPrint("BotAllocate svs->time: %d", svs->time);
     int id = SV_BotAllocateClient();
 
     if (id >= 0) {

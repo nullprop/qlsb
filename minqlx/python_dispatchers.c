@@ -183,6 +183,7 @@ void ClientThinkDispatcher(int client_id, usercmd_t* cmd) {
 		return;
 	}
 
+    // FIXME: error here if no plugin is hooking client_think
 	if (!PyDict_Check(result)) {
 		DebugError("PyObject_CallFunction() expected dict.\n",
 				__FILE__, __LINE__, __func__);

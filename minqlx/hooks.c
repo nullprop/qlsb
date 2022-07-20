@@ -199,9 +199,37 @@ void __cdecl My_SV_ClientEnterWorld(client_t* client, usercmd_t* cmd) {
 	}
 }
 
-void __cdecl My_SV_ClientThink(client_t* client, usercmd_t* cmd) {
+void __cdecl My_SV_ClientThink(client_t *client, usercmd_t *cmd)
+{
+    int i = sizeof(client_t);
+    int x = sizeof(client_old_t);
+    // Debug client dict
+    // DebugPrint("client:\n");
+    // for (size_t i = 0; i < sizeof(client_t) - 3; i++)
+    // {
+    //     int val = *(int*)((char*)client + i);
+    //     if (val != 0)
+    //         DebugPrint("  byte offset %d as int: %d\n", i, val);
+    // }
+    // int tmp = *(int*)((char*)client + 67888);
+    // DebugPrint("  byte offset 67888 as int: %d\n", tmp);
+    // int tmp = *(int*)((char*)client + 71872);
+    // DebugPrint("  byte offset 67888 as int: %d\n", tmp);
+    // DebugPrint("  byte offset 71872 as int: %d\n", tmp);
+    // DebugPrint("  lpt - client offset: %d\n", (char*)&client->lastPacketTime - (char*)client);
+    // DebugPrint("  uk - client offset: %d\n", (char*)&client->_unknownTime - (char*)client);
+    DebugPrint("  rate - client offset: %d\n", (char*)&client->rate - (char*)client);
+    DebugPrint("  rate: %d\n", client->rate);
+    // 158328 on linux
+    DebugPrint("  sizeof c: %d, sizeof old: %d\n", i, x);
+    // // abort();
+    // DebugPrint("client:\n");
+    // DebugPrint("  dm: %d\n", client->deltaMessage);
+    // DebugPrint("  nr: %d\n", client->nextReliableTime);
+    // DebugPrint("  lp: %d\n", client->lastPacketTime);
+    // DebugPrint("  uk: %d\n", client->_unknownTime);
     ClientThinkDispatcher(client - svs->clients, cmd);
-	SV_ClientThink(client, cmd);
+    SV_ClientThink(client, cmd);
 }
 
 void __cdecl My_SV_SetConfigstring(int index, char* value) {
