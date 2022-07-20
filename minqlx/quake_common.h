@@ -890,7 +890,8 @@ typedef struct client_s {
     char            name[MAX_NAME_LENGTH];          // extracted from userinfo, high bits masked
     
     // Mino: I think everything above this is correct. Below is a mess.
-    
+    // LR: FIXME: need at least lastPacketTime for avoiding bot/fake client timeout
+
     // downloading
     char            downloadName[MAX_QPATH]; // if not empty string, we are downloading
     fileHandle_t    download;           // file being downloaded
@@ -1537,6 +1538,7 @@ typedef gentity_t* (__cdecl *LaunchItem_ptr)(gitem_t *item, vec3_t origin, vec3_
 typedef gentity_t* (__cdecl *Drop_Item_ptr)(gentity_t *ent, gitem_t *item, float angle);
 typedef void (__cdecl *G_StartKamikaze_ptr)(gentity_t *ent);
 typedef void (__cdecl *G_FreeEntity_ptr)(gentity_t *ed);
+typedef void (__cdecl *SetTeam_ptr)(gentity_t *ent, char* team);
 
 // Some of them are initialized by Initialize(), but not all of them necessarily.
 extern Com_Printf_ptr Com_Printf;
@@ -1579,6 +1581,7 @@ extern LaunchItem_ptr LaunchItem;
 extern Drop_Item_ptr Drop_Item;
 extern G_StartKamikaze_ptr G_StartKamikaze;
 extern G_FreeEntity_ptr G_FreeEntity;
+extern SetTeam_ptr SetTeam;
 
 // Server replacement functions for hooks.
 void __cdecl My_Cmd_AddCommand(char* cmd, void* func);

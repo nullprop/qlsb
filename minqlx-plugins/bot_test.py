@@ -31,16 +31,17 @@ class bot_test(minqlx.Plugin):
     def __init__(self):
         super().__init__()
         self.add_hook("client_think", self.handle_client_think)
+        self.add_hook("frame", self.handle_frame)
         # self.allocate()
         self.add()
-        # self.add_command("testbot", self.cmd_add)
+        self.add_command("testbot", self.cmd_add)
 
     def handle_client_think(self, player, client_cmd):
         # client_cmd["forwardmove"] = 127
         # print("client cmd player {}:".format(player.name))
         # pprint(client_cmd)
         return client_cmd
-    
+
     def cmd_add(self, player, msg, channel):
         self.client_num = minqlx.bot_add()
         print("bot_add: {}".format(self.client_num))
@@ -51,17 +52,19 @@ class bot_test(minqlx.Plugin):
         self.client_num = minqlx.bot_add()
         print("bot_add: {}".format(self.client_num))
 
-    @minqlx.delay(5)
-    def allocate(self):
-        self.client_num = minqlx.bot_allocate_client()
-        print("allocated client {}".format(self.client_num))
-        self.free()
-
-    @minqlx.delay(5)
-    def free(self):
+    def handle_frame(self):
         if self.client_num >= 0:
-            minqlx.bot_free_client(self.client_num)
-            print("freed client {}".format(self.client_num))
-            self.client_num = -1
-        else:
-            print("no client to free")
+            cmd = {
+                "pitch": 0,
+                "yaw": 0,
+                "roll": 0,
+                "buttons": 0,
+                "weapon": 5,
+                "weapon_primary": 5,
+                "fov": 100,
+                "forwardmove": 0,
+                "rightmove": 0,
+                "upmove": 0,
+            }
+            if minqlx.client_think(self.client_num, cmd) == False:
+                self.client_num = -1

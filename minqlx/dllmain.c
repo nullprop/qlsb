@@ -71,6 +71,7 @@ LaunchItem_ptr LaunchItem;
 Drop_Item_ptr Drop_Item;
 G_StartKamikaze_ptr G_StartKamikaze;
 G_FreeEntity_ptr G_FreeEntity;
+SetTeam_ptr SetTeam;
 
 // VM global variables.
 gentity_t* g_entities;
@@ -170,6 +171,7 @@ void SearchVmFunctions(void) {
 	VM_SEARCH(Drop_Item, PTRN_DROP_ITEM, MASK_DROP_ITEM);
 	VM_SEARCH(G_StartKamikaze, PTRN_G_STARTKAMIKAZE, MASK_G_STARTKAMIKAZE);
 	VM_SEARCH(G_FreeEntity, PTRN_G_FREEENTITY, MASK_G_FREEENTITY);
+	VM_SEARCH(SetTeam, PTRN_SETTEAM, MASK_SETTEAM);
 
 	if (failed) {
 			DebugPrint("Exiting.\n");

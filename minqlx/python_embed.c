@@ -334,6 +334,61 @@ static PyObject* PyMinqlx_GetUserinfo(PyObject* self, PyObject* args) {
 
 /*
  * ================================================================
+ *                          client_think
+ * ================================================================
+*/
+
+static PyObject *PyMinqlx_ClientThink(PyObject *self, PyObject *args)
+{
+    int client_id;
+    PyObject *obj;
+    if (!PyArg_ParseTuple(args, "iO:client_think", &client_id, &obj))
+    {
+        Py_RETURN_FALSE;
+    }
+    else if (client_id < 0 || client_id >= sv_maxclients->integer)
+    {
+        PyErr_Format(PyExc_ValueError,
+                     "client_id needs to be a number from 0 to %d.",
+                     sv_maxclients->integer);
+        Py_RETURN_FALSE;
+    }
+    else if (svs->clients[client_id].state == CS_FREE) {
+        DebugPrint("WARNING: PyMinqlx_ClientThink called for CS_FREE client %d.\n", client_id);
+        Py_RETURN_FALSE;
+    }
+    else if (!PyDict_Check(obj))
+    {
+        DebugError("PyMinqlx_ClientThink() expected dict.\n",
+                   __FILE__, __LINE__, __func__);
+        Py_RETURN_FALSE;
+    }
+
+    // TODO: error check dict contents
+
+    usercmd_t cmd = {
+        .serverTime = svs->time,
+        .angles[0] = ANGLE2SHORT(PyFloat_AsDouble(PyDict_GetItemString(obj, "pitch"))),
+        .angles[1] = ANGLE2SHORT(PyFloat_AsDouble(PyDict_GetItemString(obj, "yaw"))),
+        .angles[2] = ANGLE2SHORT(PyFloat_AsDouble(PyDict_GetItemString(obj, "roll"))),
+        .buttons = (int)PyLong_AsLong(PyDict_GetItemString(obj, "buttons")),
+        .weapon = (byte)PyLong_AsLong(PyDict_GetItemString(obj, "weapon")),
+        .weaponPrimary = (byte)PyLong_AsLong(PyDict_GetItemString(obj, "weapon_primary")),
+        .fov = (byte)PyLong_AsLong(PyDict_GetItemString(obj, "fov")),
+        .forwardmove = (char)PyLong_AsLong(PyDict_GetItemString(obj, "forwardmove")),
+        .rightmove = (char)PyLong_AsLong(PyDict_GetItemString(obj, "rightmove")),
+        .upmove = (char)PyLong_AsLong(PyDict_GetItemString(obj, "upmove")),
+    };
+
+    // Needed to avoid timeout
+    svs->clients[client_id].lastPacketTime = svs->time;
+
+    My_SV_ClientThink(&svs->clients[client_id], &cmd);
+    Py_RETURN_TRUE;
+}
+
+/*
+ * ================================================================
  *                          bot_add
  * ================================================================
 */
@@ -345,11 +400,15 @@ static PyObject* PyMinqlx_BotAdd(PyObject* self, PyObject* args) {
         gentity_t *bot = &g_entities[id];
         bot->r.svFlags |= SVF_BOT;
         bot->inuse = 1;
-        char *info = "name\\TestBot\\rate\\25000\\handicap\\0"
-            "\\model\\crash/red\\headmodel\\crash/red\\sex\\female\\color1\\4"
-            "\\skill\\0\\team\\red";
+        char *info = "n\\TestBot"
+            "\\model\\bones/bones\\hmodel\\sarge" // bones model taken from player
+            "\\c1\\25\\c2\\25\\hc\\100" // not sure what these are
+            "\\w\\0\\l\\0\\tt\\0\\tl\\0\\rp\\0\\p\\0\\so\\0\\pq\\0" // or these
+            "\\t\\0" // team red
+            "\\skill\\0\\c\\FI";
         strcpy(svs->clients[id].userinfo, info);
-        ClientConnect(id, 1, 0);
+        ClientConnect(id, 1, 0); // isBot = 0 so we don't crash with no .AAS info
+        // SetTeam(bot, "red"); // This crashes
         ClientBegin(id);
     }
 
@@ -1742,6 +1801,8 @@ static PyMethodDef minqlxMethods[] = {
 	 "Returns a list with dictionaries with information about all the players on the server."},
 	{"get_userinfo", PyMinqlx_GetUserinfo, METH_VARARGS,
 	 "Returns a string with a player's userinfo."},
+    {"client_think", PyMinqlx_ClientThink, METH_VARARGS,
+	 "Invoke ClientThink. Used for custom bots."},
     {"bot_add", PyMinqlx_BotAdd, METH_NOARGS,
 	 "Try to add and spawn a bot client. Returns -1 on failure."},
     {"bot_allocate_client", PyMinqlx_BotAllocateClient, METH_NOARGS,

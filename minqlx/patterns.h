@@ -92,6 +92,11 @@
 #define MASK_G_STARTKAMIKAZE "XXXXXXXXXXXXXX-X----XXX----XXX----XXXXXX-XXX----"
 #define PTRN_G_FREEENTITY "\x48\x8b\x05\x00\x00\x00\x00\x53\x48\x89\xfb\x48\x8b\x00\xff\x90\x00\x00\x00\x00\x8b\x83\x00\x00\x00\x00\x85\xc0\x74\x00\x5b\xc3"
 #define MASK_G_FREEENTITY "XXX----XXXXXXXXX----XX----XXX-XX"
+#define PTRN_SETTEAM "\x41\x57\x41\x56\x41\x55\x41\x54\x49\x89"
+#define MASK_SETTEAM "XXXXXXXXXX"
+// SetTeam has been split into 2 functions? This gets called from the above.
+// #define PTRN_SETTEAM "\x41\x57\x48\xB8\xE1\x83\x0F\x3E\xF8\xE0\x83"
+// #define MASK_SETTEAM "XXXXXXXXXXX"
 
 // Functions without patterns.
 #define OFFSET_RELP_CMD_ARGC ((pint)SV_Map_f + 0x81)
@@ -108,9 +113,9 @@
 #define OFFSET_RELP_SV     ((pint)SV_SetConfigstring + 0xB4)
 
 // VM_Call table offsets.
-#define RELOFFSET_VM_CALL_INITGAME    0x18
 #define RELOFFSET_VM_CALL_RUNFRAME    0x8
-#define RELOFFSET_VM_CALL_CLIENTBEGIN 0x0 // TODO
+#define RELOFFSET_VM_CALL_INITGAME    0x18
+#define RELOFFSET_VM_CALL_CLIENTBEGIN 0x50
 
 #elif defined(__i386) || defined(_M_IX86)
 
