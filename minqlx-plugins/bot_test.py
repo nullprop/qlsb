@@ -33,7 +33,7 @@ class bot_test(minqlx.Plugin):
         self.add_hook("client_think", self.handle_client_think)
         self.add_hook("frame", self.handle_frame)
         # self.allocate()
-        self.add()
+        # self.add()
         self.add_command("testbot", self.cmd_add)
 
     def handle_client_think(self, player, client_cmd):

@@ -889,116 +889,67 @@ typedef struct client_s {
     sharedEntity_t  *gentity;           // SV_GentityNum(clientnum)
     char            name[MAX_NAME_LENGTH];          // extracted from userinfo, high bits masked
     
-    uint8_t _unknown0[200];
+    // These might be wrong
+    // downloading
+    char			    downloadName[MAX_QPATH]; // if not empty string, we are downloading
+    fileHandle_t	download;			// file being downloaded
+    int				    downloadSize;		// total bytes (can't use EOF because of paks)
+    int				    downloadCount;		// bytes sent
+    int				    downloadClientBlock;	// last block we sent to the client, awaiting ack
+    int				    downloadCurrentBlock;	// current block number
+    int				    downloadXmitBlock;	// last block we xmited
+    unsigned char	*downloadBlocks[MAX_DOWNLOAD_WINDOW];	// the buffers for the download blocks
+    int				    downloadBlockSize[MAX_DOWNLOAD_WINDOW];
+    qboolean		  downloadEOF;		// We have sent the EOF block
+    int				    downloadSendTime;	// time we last got an ack from the client
 
-    // 67888 bytes to this point
+    int _unknown0;
+    int _unknown1;
+
+    // 67888
     int _unknownTime; // svs.time; this is set for bots but not players?
 
-    uint8_t _unknown1[3780];
+    // uint8_t _unknown2[3968];
+    uint8_t _unknown2[1024 + 1024 + 1024 + 512 + 256 + 128];
 
-    // These are not valid
-    // downloading
-    char			downloadName[MAX_QPATH]; // if not empty string, we are downloading
-    fileHandle_t	download;			// file being downloaded
-    int				downloadSize;		// total bytes (can't use EOF because of paks)
-    int				downloadCount;		// bytes sent
-    int				downloadClientBlock;	// last block we sent to the client, awaiting ack
-    int				downloadCurrentBlock;	// current block number
-    int				downloadXmitBlock;	// last block we xmited
-    unsigned char	*downloadBlocks[MAX_DOWNLOAD_WINDOW];	// the buffers for the download blocks
-    int				downloadBlockSize[MAX_DOWNLOAD_WINDOW];
-    qboolean		downloadEOF;		// We have sent the EOF block
-    int				downloadSendTime;	// time we last got an ack from the client
-
-    int				deltaMessage;		// frame last client usercmd message
+    // 71860
+    int				deltaMessage;		  // frame last client usercmd message
     int				nextReliableTime;	// svs.time when another reliable command will be allowed
-    
+
+    int _unknown3;
+
     // 71872
-    int lastPacketTime; // svs.time when packet was last received
+    int               lastPacketTime;         // svs.time when packet was last received
+    int               lastConnectTime;        // svs.time when connection started
+    int               nextSnapshotTime;       // send another snapshot when svs.time >= nextSnapshotTime
+    qboolean          rateDelayed;            // true if nextSnapshotTime was set based on rate instead of snapshotMsec
+    int               timeoutCount;           // must timeout a few frames in a row so debugging doesn't break
+    clientSnapshot_t  frames[PACKET_BACKUP];  // updates can be delta'd from here
 
-    uint8_t _unknown2[20756];
-
-    // 92632
-    int rate;
-
-    uint8_t _unknown3[28872];
+    // 92628
+    int               ping;
+    int               rate;               // bytes / second
+    int               snapshotMsec;       // requests a snapshot every snapshotMsec unless rate choked
+    int               pureAuthentic;
+    qboolean          gotCP;              // TTimo - additional flag to distinguish between a bad pure checksum, and no cp command at all
+    netchan_t         netchan;
+    netchan_buffer_t  *netchan_start_queue;
+    netchan_buffer_t  **netchan_end_queue;
     
     // Mino: Holy crap. A bunch of data was added. I have no idea where it actually goes,
     // but this will at least correct sizeof(client_t).
 #if defined(__x86_64__) || defined(_M_X64)
-    uint8_t         _unknown4[36808];
+    // suspiciously close to 32k
+    uint8_t         _unknown5[32768];
+    uint8_t         _unknown6[56];
 #elif defined(__i386) || defined(_M_IX86)
-    uint8_t         _unknown4[36836]; // TODO: Outdated.
+    uint8_t         _unknown5[32768]; // TODO: Outdated.
+    uint8_t         _unknown6[56];
 #endif
 
     // Mino: Woohoo! How nice of them to put the SteamID last.
     uint64_t        steam_id;
 } client_t;
-
-typedef struct client_old_s {
-    clientState_t   state;
-    char            userinfo[MAX_INFO_STRING];      // name, etc
-
-    char            reliableCommands[MAX_RELIABLE_COMMANDS][MAX_STRING_CHARS];
-    int             reliableSequence;       // last added reliable message, not necesarily sent or acknowledged yet
-    int             reliableAcknowledge;    // last acknowledged reliable message
-    int             reliableSent;           // last sent reliable message, not necesarily acknowledged yet
-    int             messageAcknowledge;
-
-    int             gamestateMessageNum;    // netchan->outgoingSequence of gamestate
-    int             challenge;
-
-    usercmd_t       lastUsercmd;
-    int             lastMessageNum;     // for delta compression
-    int             lastClientCommand;  // reliable client message sequence
-    char            lastClientCommandString[MAX_STRING_CHARS];
-    sharedEntity_t  *gentity;           // SV_GentityNum(clientnum)
-    char            name[MAX_NAME_LENGTH];          // extracted from userinfo, high bits masked
-    
-    // Mino: I think everything above this is correct. Below is a mess.
-    // LR: FIXME: need at least lastPacketTime for avoiding bot/fake client timeout
-
-    // downloading
-    char            downloadName[MAX_QPATH]; // if not empty string, we are downloading
-    fileHandle_t    download;           // file being downloaded
-    int             downloadSize;       // total bytes (can't use EOF because of paks)
-    int             downloadCount;      // bytes sent
-    int             downloadClientBlock;    // last block we sent to the client, awaiting ack
-    int             downloadCurrentBlock;   // current block number
-    int             downloadXmitBlock;  // last block we xmited
-    unsigned char   *downloadBlocks[MAX_DOWNLOAD_WINDOW];   // the buffers for the download blocks
-    int             downloadBlockSize[MAX_DOWNLOAD_WINDOW];
-    qboolean        downloadEOF;        // We have sent the EOF block
-    int             downloadSendTime;   // time we last got an ack from the client
-
-    int             deltaMessage;       // frame last client usercmd message
-    int             nextReliableTime;   // svs.time when another reliable command will be allowed
-    int             lastPacketTime;     // svs.time when packet was last received
-    int             lastConnectTime;    // svs.time when connection started
-    int             nextSnapshotTime;   // send another snapshot when svs.time >= nextSnapshotTime
-    qboolean        rateDelayed;        // true if nextSnapshotTime was set based on rate instead of snapshotMsec
-    int             timeoutCount;       // must timeout a few frames in a row so debugging doesn't break
-    clientSnapshot_t    frames[PACKET_BACKUP];  // updates can be delta'd from here
-    int             ping;
-    int             rate;               // bytes / second
-    int             snapshotMsec;       // requests a snapshot every snapshotMsec unless rate choked
-    int             pureAuthentic;
-    qboolean  gotCP; // TTimo - additional flag to distinguish between a bad pure checksum, and no cp command at all
-    netchan_t       netchan;
-    netchan_buffer_t *netchan_start_queue;
-    netchan_buffer_t **netchan_end_queue;
-    
-    // Mino: Holy crap. A bunch of data was added. I have no idea where it actually goes,
-    // but this will at least correct sizeof(client_t).
-#if defined(__x86_64__) || defined(_M_X64)
-    uint8_t         _unknown2[36808];
-#elif defined(__i386) || defined(_M_IX86)
-    uint8_t         _unknown2[36836]; // TODO: Outdated.
-#endif
-
-    // Mino: Woohoo! How nice of them to put the SteamID last.
-    uint64_t        steam_id;
-} client_old_t;
 
 //
 // SERVER

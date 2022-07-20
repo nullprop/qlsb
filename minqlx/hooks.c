@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #define __STDC_FORMAT_MACROS
 
+#include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -201,33 +202,56 @@ void __cdecl My_SV_ClientEnterWorld(client_t* client, usercmd_t* cmd) {
 
 void __cdecl My_SV_ClientThink(client_t *client, usercmd_t *cmd)
 {
-    int i = sizeof(client_t);
-    int x = sizeof(client_old_t);
     // Debug client dict
-    // DebugPrint("client:\n");
+    /*
+    int i = sizeof(client_t);
+    // 158328 on linux
+    DebugPrint("  ----\nsizeof c: %d\n", i);
+
+    DebugPrint("\n");
+    DebugPrint("  dl: %s, offset: %d\n", client->downloadName, (char*)&client->downloadName - (char*)client);
+    DebugPrint("  ds: %d, offset: %d\n", client->downloadSize, (char*)&client->downloadSize - (char*)client);
+    DebugPrint("  dc: %d, offset: %d\n", client->downloadCount, (char*)&client->downloadCount - (char*)client);
+    DebugPrint("  dcb: %d, offset: %d\n", client->downloadClientBlock, (char*)&client->downloadClientBlock - (char*)client);
+    DebugPrint("  dcrb: %d, offset: %d\n", client->downloadCurrentBlock, (char*)&client->downloadCurrentBlock - (char*)client);
+    DebugPrint("  dxb: %d, offset: %d\n", client->downloadXmitBlock, (char*)&client->downloadXmitBlock - (char*)client);
+    DebugPrint("  deof: %d, offset: %d\n", client->downloadEOF, (char*)&client->downloadEOF - (char*)client);
+    DebugPrint("  dst: %d, offset: %d\n", client->downloadSendTime, (char*)&client->downloadSendTime - (char*)client);
+
+    DebugPrint("\n");
+    DebugPrint("  uk0: %d, offset: %d\n", client->_unknown0, (char*)&client->_unknown0 - (char*)client);
+    DebugPrint("  uk1: %d, offset: %d\n", client->_unknown1, (char*)&client->_unknown1 - (char*)client);
+    DebugPrint("  ukt: %d, offset: %d\n", client->_unknownTime, (char*)&client->_unknownTime - (char*)client);
+
+    DebugPrint("\n");
+    DebugPrint("  dm: %d, offset: %d\n", client->deltaMessage, (char*)&client->deltaMessage - (char*)client);
+    DebugPrint("  nrt: %d, offset: %d\n", client->nextReliableTime, (char*)&client->nextReliableTime - (char*)client);
+    DebugPrint("  uk3: %d, offset: %d\n", client->_unknown3, (char*)&client->_unknown3 - (char*)client);
+    
+    DebugPrint("\n");
+    DebugPrint("  lpt: %d, offset: %d\n", client->lastPacketTime, (char*)&client->lastPacketTime - (char*)client);
+    DebugPrint("  lct: %d, offset: %d\n", client->lastConnectTime, (char*)&client->lastConnectTime - (char*)client);
+    DebugPrint("  nst: %d, offset: %d\n", client->nextSnapshotTime, (char*)&client->nextSnapshotTime - (char*)client);
+    DebugPrint("  rd: %d, offset: %d\n", client->rateDelayed, (char*)&client->rateDelayed - (char*)client);
+    DebugPrint("  toc: %d, offset: %d\n", client->timeoutCount, (char*)&client->timeoutCount - (char*)client);
+    
+    DebugPrint("\n");
+    DebugPrint("  ping: %d, offset: %d\n", client->ping, (char*)&client->ping - (char*)client);
+    DebugPrint("  rate: %d, offset: %d\n", client->rate, (char*)&client->rate - (char*)client);
+    DebugPrint("  snms: %d, offset: %d\n", client->snapshotMsec, (char*)&client->snapshotMsec - (char*)client);
+    DebugPrint("  pure: %d, offset: %d\n", client->pureAuthentic, (char*)&client->pureAuthentic - (char*)client);
+    
+    DebugPrint("\n");
+    DebugPrint("  steamid: %" PRId64 ", offset: %d\n", client->steam_id, (char*)&client->steam_id - (char*)client);
+
     // for (size_t i = 0; i < sizeof(client_t) - 3; i++)
     // {
     //     int val = *(int*)((char*)client + i);
     //     if (val != 0)
     //         DebugPrint("  byte offset %d as int: %d\n", i, val);
     // }
-    // int tmp = *(int*)((char*)client + 67888);
-    // DebugPrint("  byte offset 67888 as int: %d\n", tmp);
-    // int tmp = *(int*)((char*)client + 71872);
-    // DebugPrint("  byte offset 67888 as int: %d\n", tmp);
-    // DebugPrint("  byte offset 71872 as int: %d\n", tmp);
-    // DebugPrint("  lpt - client offset: %d\n", (char*)&client->lastPacketTime - (char*)client);
-    // DebugPrint("  uk - client offset: %d\n", (char*)&client->_unknownTime - (char*)client);
-    DebugPrint("  rate - client offset: %d\n", (char*)&client->rate - (char*)client);
-    DebugPrint("  rate: %d\n", client->rate);
-    // 158328 on linux
-    DebugPrint("  sizeof c: %d, sizeof old: %d\n", i, x);
-    // // abort();
-    // DebugPrint("client:\n");
-    // DebugPrint("  dm: %d\n", client->deltaMessage);
-    // DebugPrint("  nr: %d\n", client->nextReliableTime);
-    // DebugPrint("  lp: %d\n", client->lastPacketTime);
-    // DebugPrint("  uk: %d\n", client->_unknownTime);
+    */
+
     ClientThinkDispatcher(client - svs->clients, cmd);
     SV_ClientThink(client, cmd);
 }
