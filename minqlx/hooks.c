@@ -454,7 +454,7 @@ void HookVm(void) {
 	*(void**)(vm_call_table + RELOFFSET_VM_CALL_INITGAME) = My_G_InitGame;
 
 	G_RunFrame = *(G_RunFrame_ptr*)(vm_call_table + RELOFFSET_VM_CALL_RUNFRAME);
-
+	ClientUserinfoChanged = *(ClientUserinfoChanged_ptr*)(vm_call_table + RELOFFSET_VM_CALL_CLIENTUSERINFOCHANGED);
 	ClientBegin = *(ClientBegin_ptr*)(vm_call_table + RELOFFSET_VM_CALL_CLIENTBEGIN);
 
 #ifndef NOPY

@@ -22,18 +22,21 @@ A sample plugin for hooking ClientThink and modifying client_cmd.
 """
 
 import minqlx
+
+import time
 from pprint import pprint
 
 
 class bot_test(minqlx.Plugin):
     client_num = -1
+    client_player = None
 
     def __init__(self):
         super().__init__()
         self.add_hook("client_think", self.handle_client_think)
         self.add_hook("frame", self.handle_frame)
         # self.allocate()
-        # self.add()
+        self.add()
         self.add_command("testbot", self.cmd_add)
 
     def handle_client_think(self, player, client_cmd):
@@ -46,25 +49,26 @@ class bot_test(minqlx.Plugin):
         self.client_num = minqlx.bot_add()
         print("bot_add: {}".format(self.client_num))
         player.tell("bot_add: {}".format(self.client_num))
-
+    
     @minqlx.delay(3)
     def add(self):
         self.client_num = minqlx.bot_add()
+        self.client_player = self.player(self.client_num)
         print("bot_add: {}".format(self.client_num))
 
     def handle_frame(self):
         if self.client_num >= 0:
             cmd = {
                 "pitch": 0,
-                "yaw": 0,
+                "yaw": time.time() * 10.0 % 360.0,
                 "roll": 0,
                 "buttons": 0,
                 "weapon": 5,
                 "weapon_primary": 5,
                 "fov": 100,
-                "forwardmove": 0,
-                "rightmove": 0,
-                "upmove": 0,
+                "forwardmove": 127,
+                "rightmove": -127,
+                "upmove": 127,
             }
             if minqlx.client_think(self.client_num, cmd) == False:
                 self.client_num = -1

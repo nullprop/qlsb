@@ -390,27 +390,40 @@ static PyObject *PyMinqlx_ClientThink(PyObject *self, PyObject *args)
 
 /*
  * ================================================================
+ *                          set_team
+ * ================================================================
+*/
+
+static PyObject* PyMinqlx_SetTeam(PyObject* self, PyObject* args) {
+    int client_id;
+    char* team;
+    if (!PyArg_ParseTuple(args, "is:set_team", &client_id, &team))
+        return NULL;
+    SetTeam(&g_entities[client_id], team);
+}
+
+/*
+ * ================================================================
  *                          bot_add
  * ================================================================
 */
 
 static PyObject* PyMinqlx_BotAdd(PyObject* self, PyObject* args) {
-    DebugPrint("BotAllocate svs->time: %d", svs->time);
     int id = SV_BotAllocateClient();
 
     if (id >= 0) {
         gentity_t *bot = &g_entities[id];
         bot->r.svFlags |= SVF_BOT;
         bot->inuse = 1;
-        char *info = "n\\TestBot"
+        char *info = "name\\TestBot"
             "\\model\\bones/bones\\hmodel\\sarge" // bones model taken from player
             "\\c1\\25\\c2\\25\\hc\\100" // not sure what these are
             "\\w\\0\\l\\0\\tt\\0\\tl\\0\\rp\\0\\p\\0\\so\\0\\pq\\0" // or these
             "\\t\\0" // team red
             "\\skill\\0\\c\\FI";
         strcpy(svs->clients[id].userinfo, info);
+        ClientUserinfoChanged(id);
         ClientConnect(id, 1, 0); // isBot = 0 so we don't crash with no .AAS info
-        // SetTeam(bot, "red"); // This crashes
         ClientBegin(id);
     }
 
@@ -1805,6 +1818,8 @@ static PyMethodDef minqlxMethods[] = {
 	 "Returns a string with a player's userinfo."},
     {"client_think", PyMinqlx_ClientThink, METH_VARARGS,
 	 "Invoke ClientThink. Used for custom bots."},
+    {"set_team", PyMinqlx_SetTeam, METH_VARARGS,
+	 "Set client team."},
     {"bot_add", PyMinqlx_BotAdd, METH_NOARGS,
 	 "Try to add and spawn a bot client. Returns -1 on failure."},
     {"bot_allocate_client", PyMinqlx_BotAllocateClient, METH_NOARGS,
