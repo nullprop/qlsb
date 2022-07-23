@@ -110,6 +110,7 @@ class bot_test(minqlx.Plugin):
                 for i in range(3):
                     wishdir[i] = forward[i] * wishmove[0] + right[i] * wishmove[1]
                 wishdir[2] += wishmove[2]
+                """
                 vel_to_optimal_yaw = StrafeHelper.get_optimal_strafe_angle(
                     forward,
                     velocity,
@@ -117,6 +118,18 @@ class bot_test(minqlx.Plugin):
                     10.0 if grounded else 1.0,
                     1.0 / 125.0,
                 )
+                """
+                vel_to_optimal_yaw = StrafeHelper2.get_optimal_strafe_angle(
+                    MathHelper.vec2_len(wishpeed),
+                    10.0 if grounded else 1.0,
+                    velocity,
+                    1.0 / 125.0
+                )
+                if (action == Actions.LEFT_DIAG):
+                    vel_to_optimal_yaw += 45.0
+                elif (action == Actions.RIGHT_DIAG):
+                    vel_to_optimal_yaw -= 45.0
+                print("opt yaw", vel_to_optimal_yaw)
                 vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
                 new_yaw = vel_yaw + vel_to_optimal_yaw
 
@@ -124,6 +137,7 @@ class bot_test(minqlx.Plugin):
             new_yaw = MathHelper.wrap_yaw(
                 new_yaw - self.client_player.state.delta_angles[1]
             )
+            print("new yaw", new_yaw)
 
             cmd = {
                 "pitch": 0,
@@ -233,6 +247,23 @@ class MathHelper:
     @staticmethod
     def clamp(a, b, c):
         return min(c, max(a, b))
+
+
+class StrafeHelper2:
+    """
+    Optimal strafe angles based on cgaz hud
+    https://github.com/Jelvan1/cgame_proxymod/blob/master/src/cg_cgaz.c
+    """
+
+    @staticmethod
+    def get_optimal_strafe_angle(wishspeed, accel, velocity, frametime)
+        speed = accel * wishspeed * frametime
+        num = wishspeed - speed
+        vel_len = MathHelper.vec2_len(velocity)
+        if num >= vel_len:
+            return 0
+        return math.acos(num / vel_len)
+
 
 
 class StrafeHelper:

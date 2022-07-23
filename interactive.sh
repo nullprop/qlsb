@@ -1,4 +1,5 @@
 #!/bin/bash
+docker build -t qlsb .
 docker run -it \
     -p 27961:27961 \
     -p 27961:27961/udp \
