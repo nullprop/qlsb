@@ -120,7 +120,7 @@ class bot_test(minqlx.Plugin):
                 )
                 """
                 vel_to_optimal_yaw = StrafeHelper2.get_optimal_strafe_angle(
-                    MathHelper.vec2_len(wishpeed),
+                    MathHelper.vec2_len(wishmove),
                     10.0 if grounded else 1.0,
                     velocity,
                     1.0 / 125.0
@@ -256,7 +256,7 @@ class StrafeHelper2:
     """
 
     @staticmethod
-    def get_optimal_strafe_angle(wishspeed, accel, velocity, frametime)
+    def get_optimal_strafe_angle(wishspeed, accel, velocity, frametime):
         speed = accel * wishspeed * frametime
         num = wishspeed - speed
         vel_len = MathHelper.vec2_len(velocity)
