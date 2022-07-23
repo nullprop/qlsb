@@ -120,6 +120,11 @@ static PyStructSequence_Field player_state_fields[] = {
     {"holdable", "The player's holdable item."},
     {"flight", "A struct sequence with flight parameters."},
     {"is_frozen", "Whether the player is frozen(freezetag)."},
+    {"grounded", "Whether the player is grounded or not."},
+    {"ground_entity", "Entity we're standing on, ENTITYNUM_NONE if none."},
+    {"viewangles", "The player's viewangles."},
+    {"delta_angles", "The player's delta_angles."},
+    {"angles", "The player's angles."},
     {NULL}
 };
 
@@ -384,7 +389,14 @@ static PyObject *PyMinqlx_ClientThink(PyObject *self, PyObject *args)
     svs->clients[client_id].lastPacketTime = svs->time;
     svs->clients[client_id]._unknownTime = svs->time; // TODO needed?
 
-    My_SV_ClientThink(&svs->clients[client_id], &cmd);
+    // Bots call ClientThink_real in G_RunClient,
+    // just need to set pers.cmd.
+    if (g_entities[client_id].r.svFlags & SVF_BOT) {
+        g_entities[client_id].client->pers.cmd = cmd;
+    } else {
+        My_SV_ClientThink(&svs->clients[client_id], &cmd);
+    }
+    
     Py_RETURN_TRUE;
 }
 
@@ -884,6 +896,36 @@ static PyObject* PyMinqlx_PlayerState(PyObject* self, PyObject* args) {
     PyStructSequence_SetItem(state, 11, flight);
 
     PyStructSequence_SetItem(state, 12, PyBool_FromLong(g_entities[client_id].client->ps.pm_type == 4));
+
+    PyStructSequence_SetItem(state, 13, PyBool_FromLong(g_entities[client_id].s.groundEntityNum != ENTITYNUM_NONE));
+    PyStructSequence_SetItem(state, 14, PyLong_FromLongLong(g_entities[client_id].s.groundEntityNum));
+
+    PyObject* viewang = PyStructSequence_New(&vector3_type);
+    PyStructSequence_SetItem(viewang, 0,
+        PyFloat_FromDouble(g_entities[client_id].client->ps.viewangles[0]));
+    PyStructSequence_SetItem(viewang, 1,
+        PyFloat_FromDouble(g_entities[client_id].client->ps.viewangles[1]));
+    PyStructSequence_SetItem(viewang, 2,
+        PyFloat_FromDouble(g_entities[client_id].client->ps.viewangles[2]));
+    PyStructSequence_SetItem(state, 15, viewang);
+
+    PyObject* delta_ang = PyStructSequence_New(&vector3_type);
+    PyStructSequence_SetItem(delta_ang, 0,
+        PyFloat_FromDouble(SHORT2ANGLE(g_entities[client_id].client->ps.delta_angles[0])));
+    PyStructSequence_SetItem(delta_ang, 1,
+        PyFloat_FromDouble(SHORT2ANGLE(g_entities[client_id].client->ps.delta_angles[1])));
+    PyStructSequence_SetItem(delta_ang, 2,
+        PyFloat_FromDouble(SHORT2ANGLE(g_entities[client_id].client->ps.delta_angles[2])));
+    PyStructSequence_SetItem(state, 16, delta_ang);
+
+    PyObject* ang = PyStructSequence_New(&vector3_type);
+    PyStructSequence_SetItem(ang, 0,
+        PyFloat_FromDouble(g_entities[client_id].s.angles[0]));
+    PyStructSequence_SetItem(ang, 1,
+        PyFloat_FromDouble(g_entities[client_id].s.angles[1]));
+    PyStructSequence_SetItem(ang, 2,
+        PyFloat_FromDouble(g_entities[client_id].s.angles[2]));
+    PyStructSequence_SetItem(state, 17, ang);
 
     return state;
 }

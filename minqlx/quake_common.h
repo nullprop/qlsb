@@ -59,6 +59,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MAX_CONFIGSTRINGS   1024
 #define GENTITYNUM_BITS     10      // don't need to send any more
 #define MAX_GENTITIES       (1<<GENTITYNUM_BITS)
+#define	ENTITYNUM_NONE		  (MAX_GENTITIES-1)
+#define	ENTITYNUM_WORLD		  (MAX_GENTITIES-2)
+#define	ENTITYNUM_MAX_NORMAL (MAX_GENTITIES-2)
 #define MAX_ITEM_MODELS 4
 #define MAX_SPAWN_VARS 64
 #define MAX_SPAWN_VARS_CHARS 4096
