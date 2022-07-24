@@ -110,20 +110,29 @@ class bot_test(minqlx.Plugin):
                 for i in range(3):
                     wishdir[i] = forward[i] * wishmove[0] + right[i] * wishmove[1]
                 wishdir[2] += wishmove[2]
+
+                wishpeed = MathHelper.vec2_len(wishmove)
+                accel = 15.0 if grounded else 1.0
+                frametime = 1.0 / 125.0
+
+                if not grounded and action in [Actions.LEFT, Actions.RIGHT]:
+                    wishspeed = min(wishspeed, 30.0)
+                    accel = 70.0
+
                 """
                 vel_to_optimal_yaw = StrafeHelper.get_optimal_strafe_angle(
                     forward,
                     velocity,
                     wishmove,
                     10.0 if grounded else 1.0,
-                    1.0 / 125.0,
+                    frametime,
                 )
                 """
                 vel_to_optimal_yaw = StrafeHelper2.get_optimal_strafe_angle(
-                    MathHelper.vec2_len(wishmove),
-                    10.0 if grounded else 1.0,
+                    wishspeed,
+                    accel,
                     velocity,
-                    1.0 / 125.0
+                    frametime
                 )
                 if (action == Actions.LEFT_DIAG):
                     vel_to_optimal_yaw += 45.0
@@ -257,8 +266,9 @@ class StrafeHelper2:
 
     @staticmethod
     def get_optimal_strafe_angle(wishspeed, accel, velocity, frametime):
-        speed = accel * wishspeed * frametime
-        num = wishspeed - speed
+        # speed = accel * wishspeed * frametime
+        # num = wishspeed - speed
+        num = wishspeed * (1.0 - accel * frametime)
         vel_len = MathHelper.vec2_len(velocity)
         if num >= vel_len:
             return 0
