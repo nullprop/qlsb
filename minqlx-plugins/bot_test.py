@@ -97,6 +97,10 @@ class bot_test(minqlx.Plugin):
             wishmove = None
             frametime = 1.0 / 125.0
 
+            # don't "ground move" for 1 frame
+            if jump:
+                grounded = False
+
             if grounded:
                 if action == Actions.LEFT:
                     action = Actions.LEFT_DIAG
