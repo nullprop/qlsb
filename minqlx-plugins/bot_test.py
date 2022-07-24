@@ -32,11 +32,11 @@ from pprint import pprint
 
 
 class Actions(IntEnum):
-    LEFT_DIAG = 2
-    RIGHT_DIAG = 3
-    LEFT = 0
-    RIGHT = 1
-    MAX_ACTION = 2 # testing
+    LEFT_DIAG = 0
+    RIGHT_DIAG = 1
+    LEFT = 2
+    RIGHT = 3
+    MAX_ACTION = 4
 
 
 class bot_test(minqlx.Plugin):
@@ -86,6 +86,7 @@ class bot_test(minqlx.Plugin):
 
     def handle_frame(self):
         if self.client_num >= 0:
+            # TODO: need to jump before this?
             grounded = self.client_player.state.grounded
             max_ground_speed = 320.0
             velocity = self.client_player.state.velocity
@@ -143,7 +144,7 @@ class bot_test(minqlx.Plugin):
                 # Turning
                 elif action in [Actions.LEFT, Actions.RIGHT]:
                     # TODO turn speeds
-                    yaw_change = 45.0 * frametime
+                    yaw_change = 10.0 * frametime
                     if action == Actions.RIGHT:
                         yaw_change = -yaw_change
                     vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
