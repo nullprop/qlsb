@@ -142,9 +142,10 @@ class bot_test(minqlx.Plugin):
                     if vel_to_optimal_yaw > 0:
                         if action in [Actions.LEFT_DIAG, Actions.RIGHT_DIAG]:
                             vel_to_optimal_yaw -= 45.0
+                        if action in [Actions.LEFT, Actions.RIGHT]:
+                            vel_to_optimal_yaw -= 90.0
                         if action in [Actions.RIGHT_DIAG, Actions.RIGHT]:
                             vel_to_optimal_yaw = -vel_to_optimal_yaw
-                    print("opt yaw", vel_to_optimal_yaw)
                     vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
                     new_yaw = vel_yaw + vel_to_optimal_yaw
 
