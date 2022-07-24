@@ -145,6 +145,8 @@ class bot_test(minqlx.Plugin):
                         frametime
                     )
                     vel_to_optimal_yaw = 90.0 - MathHelper.rad_to_deg(vel_to_optimal_yaw)
+                    if action in [Actions.RIGHT_DIAG, ACTIONS.RIGHT]:
+                        vel_to_optimal_yaw = -vel_to_optimal_yaw
                     # if (action == Actions.LEFT_DIAG):
                     #     vel_to_optimal_yaw += 30.0
                     # elif (action == Actions.RIGHT_DIAG):
