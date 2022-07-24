@@ -113,41 +113,41 @@ class bot_test(minqlx.Plugin):
             else:
                 wishmove = self.get_wishmove(action, jump)
 
-                if MathHelper.vec2_len(wishmove) > 0.1 and vel_len > 0.1:
-                    forward = MathHelper.get_forward(current_yaw)
-                    right = [forward[1], -forward[0], 0]
+                # Acceleration
+                if action in [Actions.LEFT_DIAG, Actions.RIGHT_DIAG]:
+                    if MathHelper.vec2_len(wishmove) > 0.1 and vel_len > 0.1:
+                        forward = MathHelper.get_forward(current_yaw)
+                        right = [forward[1], -forward[0], 0]
 
-                    wishvel = [0.0, 0.0, 0.0]
-                    for i in range(3):
-                        wishvel[i] = forward[i] * wishmove[0] + right[i] * wishmove[1]
-                    wishvel[2] += wishmove[2]
-                    wishspeed = MathHelper.vec2_len(wishvel)
+                        wishvel = [0.0, 0.0, 0.0]
+                        for i in range(3):
+                            wishvel[i] = forward[i] * wishmove[0] + right[i] * wishmove[1]
+                        wishvel[2] += wishmove[2]
+                        wishspeed = MathHelper.vec2_len(wishvel)
 
-                    accel = 1.0                    
+                        accel = 1.0
 
-                    # TOOD: valid in pql?
-                    """
-                    if action in [Actions.LEFT, Actions.RIGHT]:
-                        wishspeed = min(wishspeed, 30.0)
-                        accel = 70.0
-                    """
-
-                    vel_to_optimal_yaw = StrafeHelper.get_optimal_strafe_angle(
-                        wishspeed,
-                        accel,
-                        velocity,
-                        frametime
-                    )
-                    vel_to_optimal_yaw = MathHelper.rad_to_deg(vel_to_optimal_yaw)
-                    if vel_to_optimal_yaw > 0:
-                        if action in [Actions.LEFT_DIAG, Actions.RIGHT_DIAG]:
+                        vel_to_optimal_yaw = StrafeHelper.get_optimal_strafe_angle(
+                            wishspeed,
+                            accel,
+                            velocity,
+                            frametime
+                        )
+                        vel_to_optimal_yaw = MathHelper.rad_to_deg(vel_to_optimal_yaw)
+                        if vel_to_optimal_yaw > 0:
                             vel_to_optimal_yaw -= 45.0
-                        if action in [Actions.LEFT, Actions.RIGHT]:
-                            vel_to_optimal_yaw -= 90.0
-                        if action in [Actions.RIGHT_DIAG, Actions.RIGHT]:
-                            vel_to_optimal_yaw = -vel_to_optimal_yaw
+                            if action in [Actions.RIGHT_DIAG, Actions.RIGHT]:
+                                vel_to_optimal_yaw = -vel_to_optimal_yaw
+                        vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
+                        new_yaw = vel_yaw + vel_to_optimal_yaw
+                # Turning
+                elif action in [Actions.LEFT, Actions.RIGHT]:
+                    # TODO turn speeds
+                    yaw_change = 45.0 * frametime
+                    if action == Actions.RIGHT:
+                        yaw_change = -yaw_change
                     vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
-                    new_yaw = vel_yaw + vel_to_optimal_yaw
+                    new_yaw = vel_yaw + yaw_change
 
             # delta required here for bot
             new_yaw = MathHelper.wrap_yaw(
