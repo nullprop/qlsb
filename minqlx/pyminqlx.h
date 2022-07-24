@@ -81,6 +81,7 @@ extern int allow_free_client;
 char* ClientCommandDispatcher(int client_id, char* cmd);
 char* ServerCommandDispatcher(int client_id, char* cmd);
 void FrameDispatcher(void);
+void ClientThinkDispatcher(int client_id, usercmd_t* cmd);
 char* ClientConnectDispatcher(int client_id, int is_bot);
 int ClientLoadedDispatcher(int client_id);
 void ClientDisconnectDispatcher(int client_id, const char* reason);
