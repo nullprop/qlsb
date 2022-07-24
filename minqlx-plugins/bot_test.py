@@ -111,7 +111,7 @@ class bot_test(minqlx.Plugin):
                     wishdir[i] = forward[i] * wishmove[0] + right[i] * wishmove[1]
                 wishdir[2] += wishmove[2]
 
-                wishpeed = MathHelper.vec2_len(wishmove)
+                wishspeed = MathHelper.vec2_len(wishmove)
                 accel = 15.0 if grounded else 1.0
                 frametime = 1.0 / 125.0
 
