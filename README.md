@@ -16,4 +16,3 @@ docker run -it -p 27961:27961 -p 27961:27961/udp -p 28961:28961 -v qlsb_steamapp
 - https://github.com/QLRace/minqlx
 - https://github.com/QLRace/minqlx-plugins
 - https://github.com/QLRace/server-settings
-- https://github.com/kugelrund/strafe_helper

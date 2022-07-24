@@ -32,10 +32,10 @@ from pprint import pprint
 
 
 class Actions(IntEnum):
-    LEFT_DIAG = 0
-    RIGHT_DIAG = 1
-    LEFT = 2
-    RIGHT = 3
+    LEFT_DIAG = 2
+    RIGHT_DIAG = 3
+    LEFT = 0
+    RIGHT = 1
     MAX_ACTION = 2 # testing
 
 
@@ -107,7 +107,7 @@ class bot_test(minqlx.Plugin):
                 elif action == Actions.RIGHT:
                     action = Actions.RIGHT_DIAG
                 
-                accel = 15.0
+                accel = 10.0
                 
                 wishmove = self.get_wishmove(action, jump)
             else:
@@ -125,20 +125,14 @@ class bot_test(minqlx.Plugin):
 
                     accel = 1.0                    
 
+                    # TOOD: valid in pql?
+                    """
                     if action in [Actions.LEFT, Actions.RIGHT]:
                         wishspeed = min(wishspeed, 30.0)
                         accel = 70.0
+                    """
 
-                    """
                     vel_to_optimal_yaw = StrafeHelper.get_optimal_strafe_angle(
-                        forward,
-                        velocity,
-                        wishmove,
-                        10.0 if grounded else 1.0,
-                        frametime,
-                    )
-                    """
-                    vel_to_optimal_yaw = StrafeHelper2.get_optimal_strafe_angle(
                         wishspeed,
                         accel,
                         velocity,
@@ -277,12 +271,7 @@ class MathHelper:
         return min(c, max(a, b))
 
 
-class StrafeHelper2:
-    """
-    Optimal strafe angles based on cgaz hud
-    https://github.com/Jelvan1/cgame_proxymod/blob/master/src/cg_cgaz.c
-    """
-
+class StrafeHelper:
     @staticmethod
     def get_optimal_strafe_angle(wishspeed, accel, velocity, frametime):
         # speed = accel * wishspeed * frametime
@@ -292,73 +281,3 @@ class StrafeHelper2:
         if num >= vel_len:
             return 0
         return math.acos(num / vel_len)
-
-
-
-class StrafeHelper:
-    """
-    Optimal strafe angles based on code by kugelrund.
-    https://github.com/kugelrund/strafe_helper
-    MPL 2.0
-    """
-
-    # Note: Assumes forward is normalized
-    @staticmethod
-    def get_optimal_strafe_angle(forward, velocity, wishdir, accel, frametime):
-        v_z = velocity[2]
-        w_z = wishdir[2]
-
-        wishspeed = MathHelper.vec3_len(wishdir)
-        velocity_len = MathHelper.vec2_len(velocity)
-        wishdir_len = MathHelper.vec2_len(wishdir)
-
-        forward_vel_angle = math.acos(
-            MathHelper.vec_dot(forward, wishdir, 2) / wishdir_len
-        ) * MathHelper.vec2_angle_sign(wishdir, forward)
-
-        angle_sign = MathHelper.vec2_angle_sign(wishdir, velocity)
-
-        angle_optimal = (wishspeed * (1.0 - accel * frametime) - v_z * w_z) / (
-            velocity_len * wishdir_len
-        )
-        angle_optimal = MathHelper.clamp(angle_optimal, -1.0, 1.0)
-        angle_optimal = math.acos(angle_optimal)
-        angle_optimal = angle_sign * angle_optimal - forward_vel_angle
-
-        # return angle_optimal
-
-        angle_minimum = (
-            (wishspeed - v_z * w_z)
-            / (2.0 - wishdir_len * wishdir_len)
-            * wishdir_len
-            / velocity_len
-        )
-        angle_minimum = MathHelper.clamp(angle_minimum, -1.0, 1.0)
-        angle_minimum = math.acos(angle_minimum)
-        angle_minimum = angle_sign * angle_minimum - forward_vel_angle
-
-        angle_maximum = (
-            -0.5 * accel * frametime * wishspeed * wishdir_len / velocity_len
-        )
-        angle_maximum = MathHelper.clamp(angle_maximum, -1.0, 1.0)
-        angle_maximum = math.acos(angle_maximum)
-        angle_maximum = angle_sign * angle_maximum - forward_vel_angle
-
-        angle_current = MathHelper.vec_dot(velocity, forward, 2) / velocity_len
-        angle_current = MathHelper.clamp(angle_current, -1.0, 1.0)
-        angle_current = math.acos(angle_current)
-        angle_current = MathHelper.vec2_angle_sign(forward, velocity) * angle_current
-
-        angle_optimal = MathHelper.clamp(angle_optimal, angle_minimum, angle_maximum)
-        return angle_optimal
-
-        """ Make sure that angle_current fits well to the other angles. That is, try
-        * equivalent angles by adding or subtracting multiples of 2 * M_PI such
-        * that the angle values are closest to each other. That way we avoid
-        * differences greater than 2 * M_PI between the angles, which would break
-        * the drawing code. """
-        two_pi = math.pi * 2.0
-        angle_current += math.trunc((angle_minimum - angle_current) / two_pi) * two_pi
-        angle_current += math.trunc((angle_maximum - angle_current) / two_pi) * two_pi
-
-        return angle_optimal - angle_current
