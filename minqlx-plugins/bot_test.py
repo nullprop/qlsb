@@ -69,7 +69,7 @@ class bot_test(minqlx.Plugin):
         self.client_player = self.player(self.client_num)
         print("bot_add: {}".format(self.client_num))
 
-    @minqlx.delay(3)
+    @minqlx.delay(0.5)
     def cycle_action(self):
         new_action = (int(self.action) + 1) % int(Actions.MAX_ACTION)
         self.action = Actions(new_action)
