@@ -144,10 +144,11 @@ class bot_test(minqlx.Plugin):
                         velocity,
                         frametime
                     )
-                    if (action == Actions.LEFT_DIAG):
-                        vel_to_optimal_yaw += 45.0
-                    elif (action == Actions.RIGHT_DIAG):
-                        vel_to_optimal_yaw -= 45.0
+                    vel_to_optimal_yaw = 90.0 - MathHelper.rad_to_deg(vel_to_optimal_yaw)
+                    # if (action == Actions.LEFT_DIAG):
+                    #     vel_to_optimal_yaw += 30.0
+                    # elif (action == Actions.RIGHT_DIAG):
+                    #     vel_to_optimal_yaw -= 30.0
                     print("opt yaw", vel_to_optimal_yaw)
                     vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
                     new_yaw = vel_yaw + vel_to_optimal_yaw
@@ -196,6 +197,14 @@ class MathHelper:
         while yaw < -180.0:
             yaw += 360.0
         return yaw
+
+    @staticmethod
+    def rad_to_deg(a):
+        return a * 180.0 / math.pi
+
+    @staticmethod
+    def deg_to_rad(a):
+        return a * math.pi / 180.0
 
     @staticmethod
     def get_yaw(vec):
