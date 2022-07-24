@@ -36,7 +36,7 @@ class Actions(IntEnum):
     RIGHT_DIAG = 1
     LEFT = 2
     RIGHT = 3
-    MAX_ACTION = 4
+    MAX_ACTION = 2 # testing
 
 
 class bot_test(minqlx.Plugin):
@@ -92,61 +92,66 @@ class bot_test(minqlx.Plugin):
             vel_len = MathHelper.vec2_len(velocity)
             jump = grounded and vel_len > max_ground_speed
             action = self.action
+            current_yaw = self.client_player.state.viewangles[1]
+            new_yaw = current_yaw
+            wishmove = None
+            frametime = 1.0 / 125.0
+
             if grounded:
                 if action == Actions.LEFT:
                     action = Actions.LEFT_DIAG
                 elif action == Actions.RIGHT:
                     action = Actions.RIGHT_DIAG
-            wishmove = self.get_wishmove(action, jump)
+                
+                accel = 15.0
+                
+                wishmove = self.get_wishmove(action, jump)
+            else:
+                wishmove = self.get_wishmove(action, jump)
 
-            current_yaw = self.client_player.state.viewangles[1]
-            new_yaw = current_yaw
+                if MathHelper.vec2_len(wishmove) > 0.1 and vel_len > 0.1:
+                    forward = MathHelper.get_forward(current_yaw)
+                    right = [forward[1], -forward[0], 0]
 
-            if MathHelper.vec2_len(wishmove) > 0.1 and vel_len > 0.1:
-                forward = MathHelper.get_forward(current_yaw)
-                right = [forward[1], -forward[0], 0]
+                    wishvel = [0.0, 0.0, 0.0]
+                    for i in range(3):
+                        wishvel[i] = forward[i] * wishmove[0] + right[i] * wishmove[1]
+                    wishvel[2] += wishmove[2]
+                    wishspeed = MathHelper.vec2_len(wishvel)
 
-                wishdir = [0.0, 0.0, 0.0]
-                for i in range(3):
-                    wishdir[i] = forward[i] * wishmove[0] + right[i] * wishmove[1]
-                wishdir[2] += wishmove[2]
+                    accel = 1.0                    
 
-                wishspeed = MathHelper.vec2_len(wishmove)
-                accel = 15.0 if grounded else 1.0
-                frametime = 1.0 / 125.0
+                    if action in [Actions.LEFT, Actions.RIGHT]:
+                        wishspeed = min(wishspeed, 30.0)
+                        accel = 70.0
 
-                if not grounded and action in [Actions.LEFT, Actions.RIGHT]:
-                    wishspeed = min(wishspeed, 30.0)
-                    accel = 70.0
+                    """
+                    vel_to_optimal_yaw = StrafeHelper.get_optimal_strafe_angle(
+                        forward,
+                        velocity,
+                        wishmove,
+                        10.0 if grounded else 1.0,
+                        frametime,
+                    )
+                    """
+                    vel_to_optimal_yaw = StrafeHelper2.get_optimal_strafe_angle(
+                        wishspeed,
+                        accel,
+                        velocity,
+                        frametime
+                    )
+                    if (action == Actions.LEFT_DIAG):
+                        vel_to_optimal_yaw += 45.0
+                    elif (action == Actions.RIGHT_DIAG):
+                        vel_to_optimal_yaw -= 45.0
+                    print("opt yaw", vel_to_optimal_yaw)
+                    vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
+                    new_yaw = vel_yaw + vel_to_optimal_yaw
 
-                """
-                vel_to_optimal_yaw = StrafeHelper.get_optimal_strafe_angle(
-                    forward,
-                    velocity,
-                    wishmove,
-                    10.0 if grounded else 1.0,
-                    frametime,
-                )
-                """
-                vel_to_optimal_yaw = StrafeHelper2.get_optimal_strafe_angle(
-                    wishspeed,
-                    accel,
-                    velocity,
-                    frametime
-                )
-                if (action == Actions.LEFT_DIAG):
-                    vel_to_optimal_yaw += 45.0
-                elif (action == Actions.RIGHT_DIAG):
-                    vel_to_optimal_yaw -= 45.0
-                print("opt yaw", vel_to_optimal_yaw)
-                vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
-                new_yaw = vel_yaw + vel_to_optimal_yaw
-
-            # delta required here too for bot
+            # delta required here for bot
             new_yaw = MathHelper.wrap_yaw(
                 new_yaw - self.client_player.state.delta_angles[1]
             )
-            print("new yaw", new_yaw)
 
             cmd = {
                 "pitch": 0,
