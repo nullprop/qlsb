@@ -41,6 +41,7 @@ class Actions(IntEnum):
 
 
 TURN_SPEED_INTERVAL = 5
+INPUT_FRAME_INTERVAL = 25
 
 
 class bot_test(minqlx.Plugin):
@@ -65,15 +66,17 @@ class bot_test(minqlx.Plugin):
 
         # test
         self.current_action = -1
-        for i in range(125 * 10):
-            self.actions.append(Actions(random.randint(0, 2)))
+        for i in range((125 * 20) / INPUT_FRAME_INTERVAL):
+            act = Actions(random.randint(0, 2)
+            for x in range(INPUT_FRAME_INTERVAL):
+                self.actions.append(act))
 
     def handle_frame(self):
         if self.client_num < 0:
             return
 
         self.current_action += 1
-        if self.current_action > len(self.actions):
+        if self.current_action > len(self.actions) - 1:
             return
 
         self.run_action(self.actions[self.current_action])
