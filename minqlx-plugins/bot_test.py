@@ -66,17 +66,20 @@ class bot_test(minqlx.Plugin):
 
         # test
         self.current_action = -1
-        for i in range((125 * 20) / INPUT_FRAME_INTERVAL):
-            act = Actions(random.randint(0, 2)
+        for i in range(20 * int(125 / INPUT_FRAME_INTERVAL)):
+            act = Actions(random.randint(0, 2))
             for x in range(INPUT_FRAME_INTERVAL):
-                self.actions.append(act))
+                self.actions.append(act)
 
     def handle_frame(self):
         if self.client_num < 0:
             return
 
         self.current_action += 1
+
         if self.current_action > len(self.actions) - 1:
+            # don't timeout bot
+            self.run_action(Actions.MAX_ACTION)
             return
 
         self.run_action(self.actions[self.current_action])
@@ -89,7 +92,7 @@ class bot_test(minqlx.Plugin):
         max_ground_speed = 320.0
         velocity = self.client_player.state.velocity
         vel_len = MathHelper.vec2_len(velocity)
-        jump = grounded and vel_len > max_ground_speed
+        jump = grounded and vel_len > max_ground_speed and action != Actions.MAX_ACTION
         current_yaw = self.client_player.state.viewangles[1]
         new_yaw = current_yaw
         wishmove = None
