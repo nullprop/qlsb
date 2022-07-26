@@ -27,6 +27,7 @@ import minqlx
 # python
 import time
 import math
+import random
 from enum import IntEnum
 from pprint import pprint
 
@@ -39,136 +40,130 @@ class Actions(IntEnum):
     MAX_ACTION = 4
 
 
+TURN_SPEED_INTERVAL = 5
+
+
 class bot_test(minqlx.Plugin):
     client_num = -1
     client_player = None
-    action = Actions.LEFT_DIAG
+    actions = []
+    current_action = -1
 
     def __init__(self):
         super().__init__()
         self.add_hook("client_think", self.handle_client_think)
         self.add_hook("frame", self.handle_frame)
-        # self.allocate()
-        # self.add()
         self.add_command("testbot", self.cmd_add)
-        self.add_command("testang", self.cmd_ang)
-        self.cycle_action()
 
     def handle_client_think(self, player, client_cmd):
-        # client_cmd["forwardmove"] = 127
-        # print("client cmd player {}:".format(player.name))
-        # pprint(client_cmd)
         return client_cmd
 
     def cmd_add(self, player, msg, channel):
-        self.add()
-
-    @minqlx.delay(3)
-    def add(self):
         self.client_num = minqlx.bot_add()
         self.client_player = self.player(self.client_num)
         print("bot_add: {}".format(self.client_num))
 
-    @minqlx.delay(0.5)
-    def cycle_action(self):
-        new_action = (int(self.action) + 1) % int(Actions.MAX_ACTION)
-        self.action = Actions(new_action)
-        self.cycle_action()
-
-    def cmd_ang(self, player, msg, channel):
-        forward = MathHelper.get_forward(player.state.viewangles[1])
-        right = [forward[1], -forward[0], 0]
-        print(
-            "yaw {}, forward {} {}, right {} {}".format(
-                player.state.viewangles[1], forward[0], forward[1], right[0], right[1]
-            )
-        )
+        # test
+        self.current_action = -1
+        for i in range(125 * 10):
+            self.actions.append(Actions(random.randint(0, 2)))
 
     def handle_frame(self):
-        if self.client_num >= 0:
-            # TODO: need to jump before this?
-            grounded = self.client_player.state.grounded
-            max_ground_speed = 320.0
-            velocity = self.client_player.state.velocity
-            vel_len = MathHelper.vec2_len(velocity)
-            jump = grounded and vel_len > max_ground_speed
-            action = self.action
-            current_yaw = self.client_player.state.viewangles[1]
-            new_yaw = current_yaw
-            wishmove = None
-            frametime = 1.0 / 125.0
+        if self.client_num < 0:
+            return
 
-            # don't "ground move" for 1 frame
-            if jump:
-                grounded = False
+        self.current_action += 1
+        if self.current_action > len(self.actions):
+            return
 
-            if grounded:
-                if action == Actions.LEFT:
-                    action = Actions.LEFT_DIAG
-                elif action == Actions.RIGHT:
-                    action = Actions.RIGHT_DIAG
-                
-                accel = 10.0
-                
-                wishmove = self.get_wishmove(action, jump)
-            else:
-                wishmove = self.get_wishmove(action, jump)
+        self.run_action(self.actions[self.current_action])
 
-                # Acceleration
-                if action in [Actions.LEFT_DIAG, Actions.RIGHT_DIAG]:
-                    if MathHelper.vec2_len(wishmove) > 0.1 and vel_len > 0.1:
-                        forward = MathHelper.get_forward(current_yaw)
-                        right = [forward[1], -forward[0], 0]
+    def run_action(self, action):
+        if self.client_num < 0:
+            return
 
-                        wishvel = [0.0, 0.0, 0.0]
-                        for i in range(3):
-                            wishvel[i] = forward[i] * wishmove[0] + right[i] * wishmove[1]
-                        wishvel[2] += wishmove[2]
-                        wishspeed = MathHelper.vec2_len(wishvel)
+        grounded = self.client_player.state.grounded
+        max_ground_speed = 320.0
+        velocity = self.client_player.state.velocity
+        vel_len = MathHelper.vec2_len(velocity)
+        jump = grounded and vel_len > max_ground_speed
+        current_yaw = self.client_player.state.viewangles[1]
+        new_yaw = current_yaw
+        wishmove = None
+        frametime = 1.0 / 125.0
 
-                        accel = 1.0
+        # don't walkmove for 1 frame,
+        # jump will return early and call airmove instead.
+        # (or watermove)
+        if jump:
+            grounded = False
 
-                        vel_to_optimal_yaw = StrafeHelper.get_optimal_strafe_angle(
-                            wishspeed,
-                            accel,
-                            velocity,
-                            frametime
-                        )
-                        vel_to_optimal_yaw = MathHelper.rad_to_deg(vel_to_optimal_yaw)
-                        if vel_to_optimal_yaw > 0:
-                            vel_to_optimal_yaw -= 45.0
-                            if action in [Actions.RIGHT_DIAG, Actions.RIGHT]:
-                                vel_to_optimal_yaw = -vel_to_optimal_yaw
-                        vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
-                        new_yaw = vel_yaw + vel_to_optimal_yaw
-                # Turning
-                elif action in [Actions.LEFT, Actions.RIGHT]:
-                    # TODO turn speeds
-                    yaw_change = 10.0 * frametime
-                    if action == Actions.RIGHT:
-                        yaw_change = -yaw_change
-                    vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
-                    new_yaw = vel_yaw + yaw_change
+        if grounded:
+            if action == Actions.LEFT:
+                action = Actions.LEFT_DIAG
+            elif action == Actions.RIGHT:
+                action = Actions.RIGHT_DIAG
 
-            # delta required here for bot
-            new_yaw = MathHelper.wrap_yaw(
-                new_yaw - self.client_player.state.delta_angles[1]
-            )
+            accel = 10.0
 
-            cmd = {
-                "pitch": 0,
-                "yaw": new_yaw,
-                "roll": 0,
-                "buttons": 0,
-                "weapon": 5,
-                "weapon_primary": 5,
-                "fov": 100,
-                "forwardmove": wishmove[0],
-                "rightmove": wishmove[1],
-                "upmove": wishmove[2],
-            }
-            if minqlx.client_think(self.client_num, cmd) == False:
-                self.client_num = -1
+            wishmove = self.get_wishmove(action, jump)
+        else:
+            wishmove = self.get_wishmove(action, jump)
+
+            # Acceleration
+            if action in [Actions.LEFT_DIAG, Actions.RIGHT_DIAG]:
+                if MathHelper.vec2_len(wishmove) > 0.1 and vel_len > 0.1:
+                    forward = MathHelper.get_forward(current_yaw)
+                    right = [forward[1], -forward[0], 0]
+
+                    wishvel = [0.0, 0.0, 0.0]
+                    for i in range(3):
+                        wishvel[i] = forward[i] * wishmove[0] + right[i] * wishmove[1]
+                    wishvel[2] += wishmove[2]
+                    wishspeed = MathHelper.vec2_len(wishvel)
+
+                    accel = 1.0
+
+                    vel_to_optimal_yaw = MathHelper.get_optimal_strafe_angle(
+                        wishspeed, accel, velocity, frametime
+                    )
+                    vel_to_optimal_yaw = MathHelper.rad_to_deg(vel_to_optimal_yaw)
+                    if vel_to_optimal_yaw > 0:
+                        vel_to_optimal_yaw -= 45.0
+                        if action in [Actions.RIGHT_DIAG, Actions.RIGHT]:
+                            vel_to_optimal_yaw = -vel_to_optimal_yaw
+                    vel_yaw = MathHelper.get_yaw(
+                        [velocity[0], velocity[1], velocity[2]]
+                    )
+                    new_yaw = vel_yaw + vel_to_optimal_yaw
+            # Turning
+            elif action in [Actions.LEFT, Actions.RIGHT]:
+                # TODO turn speeds
+                yaw_change = 10.0 * frametime
+                if action == Actions.RIGHT:
+                    yaw_change = -yaw_change
+                vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
+                new_yaw = vel_yaw + yaw_change
+
+        # delta required here for bot
+        new_yaw = MathHelper.wrap_yaw(
+            new_yaw - self.client_player.state.delta_angles[1]
+        )
+
+        cmd = {
+            "pitch": 0,
+            "yaw": new_yaw,
+            "roll": 0,
+            "buttons": 0,
+            "weapon": 5,
+            "weapon_primary": 5,
+            "fov": 100,
+            "forwardmove": wishmove[0],
+            "rightmove": wishmove[1],
+            "upmove": wishmove[2],
+        }
+        if minqlx.client_think(self.client_num, cmd) == False:
+            self.client_num = -1
 
     def get_wishmove(self, action, jump):
         speed = 127
@@ -272,8 +267,6 @@ class MathHelper:
     def clamp(a, b, c):
         return min(c, max(a, b))
 
-
-class StrafeHelper:
     @staticmethod
     def get_optimal_strafe_angle(wishspeed, accel, velocity, frametime):
         # speed = accel * wishspeed * frametime
