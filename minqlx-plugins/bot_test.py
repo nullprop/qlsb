@@ -40,7 +40,7 @@ class Actions(IntEnum):
     MAX_ACTION = 4
 
 
-TURN_SPEED_INTERVAL = 5
+TURN_SPEED_MAX = 180
 INPUT_FRAME_INTERVAL = 25
 
 
@@ -67,7 +67,11 @@ class bot_test(minqlx.Plugin):
         # test
         self.current_action = -1
         for i in range(20 * int(125 / INPUT_FRAME_INTERVAL)):
-            act = Actions(random.randint(0, 2))
+            act = Actions(random.randint(0, int(Actions.MAX_ACTION) - 1))
+            if act in [Actions.LEFT, Actions.RIGHT]:
+                act = (act, random.randint(0, TURN_SPEED_MAX))
+            else:
+                act = act
             for x in range(INPUT_FRAME_INTERVAL):
                 self.actions.append(act)
 
@@ -79,7 +83,7 @@ class bot_test(minqlx.Plugin):
 
         if self.current_action > len(self.actions) - 1:
             # don't timeout bot
-            self.run_action(Actions.MAX_ACTION)
+            self.run_action((Actions.MAX_ACTION))
             return
 
         self.run_action(self.actions[self.current_action])
@@ -92,7 +96,7 @@ class bot_test(minqlx.Plugin):
         max_ground_speed = 320.0
         velocity = self.client_player.state.velocity
         vel_len = MathHelper.vec2_len(velocity)
-        jump = grounded and vel_len > max_ground_speed and action != Actions.MAX_ACTION
+        jump = grounded and vel_len > max_ground_speed and action[0] != Actions.MAX_ACTION
         current_yaw = self.client_player.state.viewangles[1]
         new_yaw = current_yaw
         wishmove = None
@@ -105,19 +109,19 @@ class bot_test(minqlx.Plugin):
             grounded = False
 
         if grounded:
-            if action == Actions.LEFT:
-                action = Actions.LEFT_DIAG
-            elif action == Actions.RIGHT:
-                action = Actions.RIGHT_DIAG
+            if action[0] == Actions.LEFT:
+                action[0] = Actions.LEFT_DIAG
+            elif action[0] == Actions.RIGHT:
+                action[0] = Actions.RIGHT_DIAG
 
             accel = 10.0
 
-            wishmove = self.get_wishmove(action, jump)
+            wishmove = self.get_wishmove(action[0], jump)
         else:
-            wishmove = self.get_wishmove(action, jump)
+            wishmove = self.get_wishmove(action[0], jump)
 
             # Acceleration
-            if action in [Actions.LEFT_DIAG, Actions.RIGHT_DIAG]:
+            if action[0] in [Actions.LEFT_DIAG, Actions.RIGHT_DIAG]:
                 if MathHelper.vec2_len(wishmove) > 0.1 and vel_len > 0.1:
                     forward = MathHelper.get_forward(current_yaw)
                     right = [forward[1], -forward[0], 0]
@@ -136,17 +140,16 @@ class bot_test(minqlx.Plugin):
                     vel_to_optimal_yaw = MathHelper.rad_to_deg(vel_to_optimal_yaw)
                     if vel_to_optimal_yaw > 0:
                         vel_to_optimal_yaw -= 45.0
-                        if action in [Actions.RIGHT_DIAG, Actions.RIGHT]:
+                        if action[0] in [Actions.RIGHT_DIAG, Actions.RIGHT]:
                             vel_to_optimal_yaw = -vel_to_optimal_yaw
                     vel_yaw = MathHelper.get_yaw(
                         [velocity[0], velocity[1], velocity[2]]
                     )
                     new_yaw = vel_yaw + vel_to_optimal_yaw
             # Turning
-            elif action in [Actions.LEFT, Actions.RIGHT]:
-                # TODO turn speeds
-                yaw_change = 10.0 * frametime
-                if action == Actions.RIGHT:
+            elif action[0] in [Actions.LEFT, Actions.RIGHT]:
+                yaw_change = action[1] * frametime
+                if action[0] == Actions.RIGHT:
                     yaw_change = -yaw_change
                 vel_yaw = MathHelper.get_yaw([velocity[0], velocity[1], velocity[2]])
                 new_yaw = vel_yaw + yaw_change
