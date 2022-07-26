@@ -69,9 +69,9 @@ class bot_test(minqlx.Plugin):
         for i in range(20 * int(125 / INPUT_FRAME_INTERVAL)):
             act = Actions(random.randint(0, int(Actions.MAX_ACTION) - 1))
             if act in [Actions.LEFT, Actions.RIGHT]:
-                act = (act, random.randint(0, TURN_SPEED_MAX))
+                act = [act, random.randint(0, TURN_SPEED_MAX)]
             else:
-                act = act
+                act = [act]
             for x in range(INPUT_FRAME_INTERVAL):
                 self.actions.append(act)
 
@@ -83,7 +83,7 @@ class bot_test(minqlx.Plugin):
 
         if self.current_action > len(self.actions) - 1:
             # don't timeout bot
-            self.run_action((Actions.MAX_ACTION))
+            self.run_action([Actions.MAX_ACTION])
             return
 
         self.run_action(self.actions[self.current_action])
