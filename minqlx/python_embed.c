@@ -125,6 +125,9 @@ static PyStructSequence_Field player_state_fields[] = {
     {"viewangles", "The player's viewangles."},
     {"delta_angles", "The player's delta_angles."},
     {"angles", "The player's angles."},
+    {"gravity", "The player's gravity."},
+    {"jump_time", "The player's jumpTime."},
+    {"double_jumped", "The player's doubleJumped state."},
     {NULL}
 };
 
@@ -927,6 +930,12 @@ static PyObject* PyMinqlx_PlayerState(PyObject* self, PyObject* args) {
         PyFloat_FromDouble(g_entities[client_id].s.angles[2]));
     PyStructSequence_SetItem(state, 17, ang);
 
+    PyStructSequence_SetItem(state, 18, PyFloat_FromDouble(g_entities[client_id].client->ps.gravity));
+
+    PyStructSequence_SetItem(state, 19, PyLong_FromLongLong(g_entities[client_id].client->ps.jumpTime));
+
+    PyStructSequence_SetItem(state, 20, PyLong_FromLongLong(g_entities[client_id].client->ps.doubleJumped));
+
     return state;
 }
 
@@ -1065,6 +1074,123 @@ static PyObject* PyMinqlx_SetViewangles(PyObject* self, PyObject* args) {
         (float)PyFloat_AsDouble(PyStructSequence_GetItem(new_viewangles, 1));
     g_entities[client_id].client->ps.viewangles[2] =
         (float)PyFloat_AsDouble(PyStructSequence_GetItem(new_viewangles, 2));
+
+    Py_RETURN_TRUE;
+}
+
+/*
+ * ================================================================
+ *                          set_ground_entity
+ * ================================================================
+*/
+
+static PyObject *PyMinqlx_SetGroundEntity(PyObject *self, PyObject *args)
+{
+    int client_id;
+    int ground_ent;
+
+    if (!PyArg_ParseTuple(args, "ii:set_ground_entity", &client_id, &ground_ent))
+        return NULL;
+    else if (client_id < 0 || client_id >= sv_maxclients->integer)
+    {
+        PyErr_Format(PyExc_ValueError,
+                     "client_id needs to be a number from 0 to %d.",
+                     sv_maxclients->integer);
+        return NULL;
+    }
+    else if (!g_entities[client_id].client)
+        Py_RETURN_FALSE;
+    else if (ground_ent < 0 || ground_ent > ENTITYNUM_NONE)
+    {
+        PyErr_Format(PyExc_ValueError, "ground_entity need to be a number from 0 to %d", ENTITYNUM_NONE);
+        return NULL;
+    }
+
+    g_entities[client_id].client->ps.groundEntityNum = ground_ent;
+
+    Py_RETURN_TRUE;
+}
+
+/*
+ * ================================================================
+ *                          set_gravity
+ * ================================================================
+*/
+
+static PyObject *PyMinqlx_SetGravity(PyObject *self, PyObject *args)
+{
+    int client_id;
+    float gravity;
+
+    if (!PyArg_ParseTuple(args, "if:set_gravity", &client_id, &gravity))
+        return NULL;
+    else if (client_id < 0 || client_id >= sv_maxclients->integer)
+    {
+        PyErr_Format(PyExc_ValueError,
+                     "client_id needs to be a number from 0 to %d.",
+                     sv_maxclients->integer);
+        return NULL;
+    }
+    else if (!g_entities[client_id].client)
+        Py_RETURN_FALSE;
+
+    g_entities[client_id].client->ps.gravity = gravity;
+
+    Py_RETURN_TRUE;
+}
+
+/*
+ * ================================================================
+ *                          set_jump_time
+ * ================================================================
+*/
+
+static PyObject *PyMinqlx_SetJumpTime(PyObject *self, PyObject *args)
+{
+    int client_id;
+    int jump_time;
+
+    if (!PyArg_ParseTuple(args, "ii:set_jump_time", &client_id, &jump_time))
+        return NULL;
+    else if (client_id < 0 || client_id >= sv_maxclients->integer)
+    {
+        PyErr_Format(PyExc_ValueError,
+                     "client_id needs to be a number from 0 to %d.",
+                     sv_maxclients->integer);
+        return NULL;
+    }
+    else if (!g_entities[client_id].client)
+        Py_RETURN_FALSE;
+
+    g_entities[client_id].client->ps.jumpTime = jump_time;
+
+    Py_RETURN_TRUE;
+}
+
+/*
+ * ================================================================
+ *                          set_double_jumped
+ * ================================================================
+*/
+
+static PyObject *PyMinqlx_SetDoubleJumped(PyObject *self, PyObject *args)
+{
+    int client_id;
+    int double_jumped;
+
+    if (!PyArg_ParseTuple(args, "ii:set_double_jumped", &client_id, &double_jumped))
+        return NULL;
+    else if (client_id < 0 || client_id >= sv_maxclients->integer)
+    {
+        PyErr_Format(PyExc_ValueError,
+                     "client_id needs to be a number from 0 to %d.",
+                     sv_maxclients->integer);
+        return NULL;
+    }
+    else if (!g_entities[client_id].client)
+        Py_RETURN_FALSE;
+
+    g_entities[client_id].client->ps.doubleJumped = double_jumped;
 
     Py_RETURN_TRUE;
 }
@@ -1939,6 +2065,14 @@ static PyMethodDef minqlxMethods[] = {
      "Sets a player's velocity vector."},
     {"set_viewangles", PyMinqlx_SetViewangles, METH_VARARGS,
      "Sets a player's viewangles vector."},
+    {"set_ground_entity", PyMinqlx_SetGroundEntity, METH_VARARGS,
+     "Sets a player's ground entity num."},
+    {"set_gravity", PyMinqlx_SetGravity, METH_VARARGS,
+     "Sets a player's gravity."},
+    {"set_jump_time", PyMinqlx_SetJumpTime, METH_VARARGS,
+     "Sets a player's jumpTime."},
+    {"set_double_jumped", PyMinqlx_SetDoubleJumped, METH_VARARGS,
+     "Sets a player's doubleJumped."},
     {"noclip", PyMinqlx_NoClip, METH_VARARGS,
      "Sets noclip for a player."},
     {"set_health", PyMinqlx_SetHealth, METH_VARARGS,
