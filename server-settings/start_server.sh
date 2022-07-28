@@ -20,7 +20,7 @@ fi
 
 echo "Starting redis..."
 redis-server --daemonize yes
-sleep 5
+sleep 3
 
 echo "Starting minqlx..."
 exec /home/steam/qlds/run_server_x64_minqlx.sh \
