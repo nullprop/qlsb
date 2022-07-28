@@ -45,10 +45,7 @@ INPUT_FRAME_INTERVAL = 25
 
 
 class bot_test(minqlx.Plugin):
-    client_num = -1
-    client_player = None
-    actions = []
-    current_action = -1
+    bot = None
 
     def __init__(self):
         super().__init__()
@@ -60,10 +57,23 @@ class bot_test(minqlx.Plugin):
         return client_cmd
 
     def cmd_add(self, player, msg, channel):
-        self.client_num = minqlx.bot_add()
-        self.client_player = self.player(self.client_num)
-        print("bot_add: {}".format(self.client_num))
+        self.bot = StrafeBot(minqlx.bot_add())
 
+    def handle_frame(self):
+        if self.bot is not None:
+            if self.bot.run_frame() == False:
+                self.bot = None
+
+
+class StrafeBot(minqlx.Player):
+    actions = []
+    current_action = -1
+
+    def __init__(self, client_id):
+        super().__init__(client_id)
+        self.reset()
+
+    def reset(self):
         # test
         self.current_action = -1
         for i in range(20 * int(125 / INPUT_FRAME_INTERVAL)):
@@ -75,29 +85,24 @@ class bot_test(minqlx.Plugin):
             for x in range(INPUT_FRAME_INTERVAL):
                 self.actions.append(act)
 
-    def handle_frame(self):
-        if self.client_num < 0:
-            return
-
+    def run_frame(self):
         self.current_action += 1
 
         if self.current_action > len(self.actions) - 1:
             # don't timeout bot
-            self.run_action([Actions.MAX_ACTION])
-            return
+            return self.run_action([Actions.MAX_ACTION])
 
-        self.run_action(self.actions[self.current_action])
+        return self.run_action(self.actions[self.current_action])
 
     def run_action(self, action):
-        if self.client_num < 0:
-            return
-
-        grounded = self.client_player.state.grounded
+        grounded = self.state.grounded
         max_ground_speed = 320.0
-        velocity = self.client_player.state.velocity
+        velocity = self.state.velocity
         vel_len = MathHelper.vec2_len(velocity)
-        jump = grounded and vel_len > max_ground_speed and action[0] != Actions.MAX_ACTION
-        current_yaw = self.client_player.state.viewangles[1]
+        jump = (
+            grounded and vel_len > max_ground_speed and action[0] != Actions.MAX_ACTION
+        )
+        current_yaw = self.state.viewangles[1]
         new_yaw = current_yaw
         wishmove = None
         frametime = 1.0 / 125.0
@@ -155,9 +160,7 @@ class bot_test(minqlx.Plugin):
                 new_yaw = vel_yaw + yaw_change
 
         # delta required here for bot
-        new_yaw = MathHelper.wrap_yaw(
-            new_yaw - self.client_player.state.delta_angles[1]
-        )
+        new_yaw = MathHelper.wrap_yaw(new_yaw - self.state.delta_angles[1])
 
         cmd = {
             "pitch": 0,
@@ -171,8 +174,7 @@ class bot_test(minqlx.Plugin):
             "rightmove": wishmove[1],
             "upmove": wishmove[2],
         }
-        if minqlx.client_think(self.client_num, cmd) == False:
-            self.client_num = -1
+        return minqlx.client_think(self.id, cmd)
 
     def get_wishmove(self, action, jump):
         speed = 127
