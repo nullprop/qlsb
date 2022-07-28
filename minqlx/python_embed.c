@@ -897,8 +897,8 @@ static PyObject* PyMinqlx_PlayerState(PyObject* self, PyObject* args) {
 
     PyStructSequence_SetItem(state, 12, PyBool_FromLong(g_entities[client_id].client->ps.pm_type == 4));
 
-    PyStructSequence_SetItem(state, 13, PyBool_FromLong(g_entities[client_id].s.groundEntityNum != ENTITYNUM_NONE));
-    PyStructSequence_SetItem(state, 14, PyLong_FromLongLong(g_entities[client_id].s.groundEntityNum));
+    PyStructSequence_SetItem(state, 13, PyBool_FromLong(g_entities[client_id].client->ps.groundEntityNum != ENTITYNUM_NONE));
+    PyStructSequence_SetItem(state, 14, PyLong_FromLongLong(g_entities[client_id].client->ps.groundEntityNum));
 
     PyObject* viewang = PyStructSequence_New(&vector3_type);
     PyStructSequence_SetItem(viewang, 0,
@@ -1030,6 +1030,41 @@ static PyObject* PyMinqlx_SetVelocity(PyObject* self, PyObject* args) {
         (float)PyFloat_AsDouble(PyStructSequence_GetItem(new_velocity, 1));
     g_entities[client_id].client->ps.velocity[2] =
         (float)PyFloat_AsDouble(PyStructSequence_GetItem(new_velocity, 2));
+
+    Py_RETURN_TRUE;
+}
+
+/*
+ * ================================================================
+ *                          set_viewangles
+ * ================================================================
+*/
+
+static PyObject* PyMinqlx_SetViewangles(PyObject* self, PyObject* args) {
+    int client_id;
+    PyObject* new_viewangles;
+
+    if (!PyArg_ParseTuple(args, "iO:set_viewangles", &client_id, &new_viewangles))
+        return NULL;
+    else if (client_id < 0 || client_id >= sv_maxclients->integer) {
+        PyErr_Format(PyExc_ValueError,
+                     "client_id needs to be a number from 0 to %d.",
+                     sv_maxclients->integer);
+        return NULL;
+    }
+    else if (!g_entities[client_id].client)
+        Py_RETURN_FALSE;
+    else if (!PyObject_TypeCheck(new_viewangles, &vector3_type)) {
+        PyErr_Format(PyExc_ValueError, "Argument must be of type minqlx.Vector3.");
+        return NULL;
+    }
+
+    g_entities[client_id].client->ps.viewangles[0] =
+        (float)PyFloat_AsDouble(PyStructSequence_GetItem(new_viewangles, 0));
+    g_entities[client_id].client->ps.viewangles[1] =
+        (float)PyFloat_AsDouble(PyStructSequence_GetItem(new_viewangles, 1));
+    g_entities[client_id].client->ps.viewangles[2] =
+        (float)PyFloat_AsDouble(PyStructSequence_GetItem(new_viewangles, 2));
 
     Py_RETURN_TRUE;
 }
@@ -1902,6 +1937,8 @@ static PyMethodDef minqlxMethods[] = {
      "Sets a player's position vector."},
     {"set_velocity", PyMinqlx_SetVelocity, METH_VARARGS,
      "Sets a player's velocity vector."},
+    {"set_viewangles", PyMinqlx_SetViewangles, METH_VARARGS,
+     "Sets a player's viewangles vector."},
     {"noclip", PyMinqlx_NoClip, METH_VARARGS,
      "Sets noclip for a player."},
     {"set_health", PyMinqlx_SetHealth, METH_VARARGS,
