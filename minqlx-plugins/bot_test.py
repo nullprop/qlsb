@@ -308,7 +308,7 @@ class StrafeBot(minqlx.Player):
                 Actions.LEFT,
                 Actions.RIGHT,
             ]:
-                if self.last_solution[1] > 1:
+                if self.last_solution[1] > TURN_SPEED_INTERVAL:
                     # turning faster is giving less reward, don't bother iterating through remaining angles
                     if self.last_solution[0] == Actions.LEFT:
                         self.last_solution[0] = Actions.RIGHT
