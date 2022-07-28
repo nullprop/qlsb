@@ -32,6 +32,70 @@ from enum import IntEnum
 from pprint import pprint
 
 
+class bot_test(minqlx.Plugin):
+    bot = None
+    start_pos = None
+    start_ang = None
+
+    def __init__(self):
+        super().__init__()
+
+        self.add_hook("client_think", self.handle_client_think)
+        self.add_hook("frame", self.handle_frame)
+
+        self.add_command("testbot", self.cmd_add)
+        self.add_command("resetbot", self.cmd_reset)
+        self.add_command("solve", self.cmd_solve)
+        self.add_command("stopsolve", self.cmd_stop_solve)
+        self.add_command("play", self.cmd_play)
+        self.add_command("stopplay", self.cmd_stop_play)
+        self.add_command("setstart", self.cmd_set_start)
+
+    def handle_client_think(self, player, client_cmd):
+        return client_cmd
+
+    def cmd_add(self, player, msg, channel):
+        self.bot = StrafeBot(minqlx.bot_add())
+        if self.start_pos != None and self.start_ang != None:
+            self.bot.set_start(
+                self.start_pos,
+                self.start_ang,
+            )
+
+    def cmd_reset(self, player, msg, channel):
+        self.bot.reset()
+
+    def cmd_solve(self, player, msg, channel):
+        self.bot.start_solve()
+
+    def cmd_stop_solve(self, player, msg, channel):
+        self.bot.stop_solve()
+
+    def cmd_play(self, player, msg, channel):
+        self.bot.start_playback()
+
+    def cmd_stop_play(self, player, msg, channel):
+        self.bot.stop_playback()
+
+    def cmd_set_start(self, player, msg, channel):
+        self.start_pos = player.state.position
+        self.start_ang = [
+            0,
+            player.state.viewangles[1],
+            0,
+        ]
+        if self.bot != None:
+            self.bot.set_start(
+                self.start_pos,
+                self.start_ang,
+            )
+
+    def handle_frame(self):
+        if self.bot is not None:
+            if self.bot.run_frame() == False:
+                self.bot = None
+
+
 class Actions(IntEnum):
     LEFT_DIAG = 0
     RIGHT_DIAG = 1
@@ -44,61 +108,192 @@ TURN_SPEED_MAX = 180
 INPUT_FRAME_INTERVAL = 25
 
 
-class bot_test(minqlx.Plugin):
-    bot = None
-
-    def __init__(self):
-        super().__init__()
-        self.add_hook("client_think", self.handle_client_think)
-        self.add_hook("frame", self.handle_frame)
-        self.add_command("testbot", self.cmd_add)
-
-    def handle_client_think(self, player, client_cmd):
-        return client_cmd
-
-    def cmd_add(self, player, msg, channel):
-        self.bot = StrafeBot(minqlx.bot_add())
-
-    def handle_frame(self):
-        if self.bot is not None:
-            if self.bot.run_frame() == False:
-                self.bot = None
-
-
 class StrafeBot(minqlx.Player):
-    actions = []
-    current_action = -1
+    playback_frame = -1
+    history = []
+    playback = False
+    solve = False
+    best_solution = None
+    last_solution = None
+    measure_next_frame = False
+    save_next_frame = False
 
     def __init__(self, client_id):
         super().__init__(client_id)
-        self.reset()
+
+    @staticmethod
+    def empty_solution():
+        return [Actions.MAX_ACTION, 0, -math.inf]
 
     def reset(self):
-        # test
-        self.current_action = -1
-        for i in range(20 * int(125 / INPUT_FRAME_INTERVAL)):
-            act = Actions(random.randint(0, int(Actions.MAX_ACTION) - 1))
-            if act in [Actions.LEFT, Actions.RIGHT]:
-                act = [act, random.randint(0, TURN_SPEED_MAX)]
-            else:
-                act = [act]
-            for x in range(INPUT_FRAME_INTERVAL):
-                self.actions.append(act)
+        self.playback_frame = -1
+        self.history = []
+        self.playback = False
+        self.solve = False
+        self.measure_next_frame = False
+        self.save_next_frame = False
+        self.best_solution = StrafeBot.empty_solution()
+        self.last_solution = StrafeBot.empty_solution()
+
+    def set_start(self, start_pos, start_ang):
+        self.reset()
+        self.teleport(
+            start_pos,
+            (0, 0, 0),
+            (0, start_ang[1], 0),
+        )
+        self.history.append(
+            [
+                [start_pos[0], start_pos[1], start_pos[2]],
+                [0, 0, 0],
+                [0, start_ang[1], 0],
+                StrafeBot.empty_solution(),
+            ]
+        )
+
+    def start_playback(self):
+        if len(self.history) > 0:
+            self.teleport(
+                self.history[0][0],
+                self.history[0][1],
+                self.history[0][2],
+            )
+            self.playback = True
+            self.playback_frame = -1
+        else:
+            print("start_playback() expected history")
+
+    def stop_playback(self):
+        self.playback = False
+
+    def start_solve(self):
+        if len(self.history) > 0:
+            self.teleport(
+                self.history[-1][0],
+                self.history[-1][1],
+                self.history[-1][2],
+            )
+            self.solve = True
+        else:
+            print("start_solve() expected history")
+
+    def stop_solve(self):
+        self.solve = False
 
     def run_frame(self):
-        self.current_action += 1
+        if self.playback == True:
+            return self.run_playback_frame()
+        elif self.solve == True:
+            return self.run_solve_frame()
+        self.idle_frame()
 
-        if self.current_action > len(self.actions) - 1:
+    def run_playback_frame(self):
+        self.playback_frame += 1
+
+        if self.playback_frame > len(self.history) - 1:
             # don't timeout bot
-            return self.run_action([Actions.MAX_ACTION])
+            return self.idle_frame()
 
-        return self.run_action(self.actions[self.current_action])
+        return self.run_action(self.history[self.playback_frame][3])
+
+    def run_solve_frame(self):
+        # 1 frame delay so run_action applies new position
+        if self.measure_next_frame == True:
+            self.measure_next_frame = False
+            self.last_solution[2] = self.get_reward()
+            if self.last_solution[2] > self.best_solution[2]:
+                self.best_solution = [
+                    self.last_solution[0],
+                    self.last_solution[1],
+                    self.last_solution[2],
+                ]
+
+        # 1 frame delay so run_action applies new position
+        if self.save_next_frame == True:
+            self.save_next_frame = False
+            self.history.append(
+                [
+                    self.state.position,
+                    self.state.velocity,
+                    self.state.viewangles,
+                    StrafeBot.empty_solution(),
+                ]
+            )
+
+        if self.last_solution[0] == Actions.MAX_ACTION:
+            self.last_solution[0] = Actions.LEFT_DIAG
+
+        elif self.last_solution[0] == Actions.LEFT_DIAG:
+            self.last_solution[0] = Actions.RIGHT_DIAG
+
+        elif self.last_solution[0] == Actions.RIGHT_DIAG:
+            self.last_solution[0] = Actions.LEFT
+            self.last_solution[1] = 1
+
+        elif self.last_solution[0] == Actions.LEFT:
+            self.last_solution[1] += 1
+            if self.last_solution[1] > TURN_SPEED_MAX:
+                self.last_solution[0] = Actions.RIGHT
+                self.last_solution[1] = 1
+
+        elif self.last_solution[0] == Actions.RIGHT:
+            self.last_solution[1] += 1
+            if self.last_solution[1] > TURN_SPEED_MAX:
+                # tried all inputs
+                return self.solve_frame_advance(self.best_solution)
+
+        return self.solve_frame_measure()
+
+    def solve_frame_measure(self):
+        self.teleport(
+            self.history[-1][0],
+            self.history[-1][1],
+            self.history[-1][2],
+        )
+        self.measure_next_frame = True
+        success = self.run_action(self.last_solution)
+        return success
+
+    def solve_frame_advance(self, solution):
+        if len(self.history) > 0:
+            self.history[-1][3] = solution
+            self.teleport(
+                self.history[-1][0],
+                self.history[-1][1],
+                self.history[-1][2],
+            )
+        print(
+            "history len {}, s {} {} {}".format(
+                len(self.history),
+                solution[0],
+                solution[1],
+                solution[2],
+            )
+        )
+        self.save_next_frame = True
+        success = self.run_action(solution)
+        self.last_solution = StrafeBot.empty_solution()
+        self.best_solution = StrafeBot.empty_solution()
+        return success
+
+    def idle_frame(self):
+        return self.run_action([Actions.MAX_ACTION])
+
+    def get_reward(self):
+        # TODO
+        return self.state.velocity[1]
+        # return self.state.position[1] - self.history[-1][0][1]
+
+    def teleport(self, pos, vel, ang):
+        minqlx.set_position(self.id, minqlx.Vector3(pos))
+        minqlx.set_velocity(self.id, minqlx.Vector3(vel))
+        minqlx.set_viewangles(self.id, minqlx.Vector3(ang))
 
     def run_action(self, action):
-        grounded = self.state.grounded
         max_ground_speed = 320.0
         velocity = self.state.velocity
         vel_len = MathHelper.vec2_len(velocity)
+        grounded = self.state.grounded and velocity[2] < 250
         jump = (
             grounded and vel_len > max_ground_speed and action[0] != Actions.MAX_ACTION
         )
@@ -114,14 +309,22 @@ class StrafeBot(minqlx.Player):
             grounded = False
 
         if grounded:
-            if action[0] == Actions.LEFT:
-                action[0] = Actions.LEFT_DIAG
-            elif action[0] == Actions.RIGHT:
-                action[0] = Actions.RIGHT_DIAG
+            # don't modify passed list
+            act = action[0]
+            turn = 0
+            if act == Actions.LEFT:
+                act = Actions.LEFT_DIAG
+                turn = action[1]
+            elif act == Actions.RIGHT:
+                act = Actions.RIGHT_DIAG
+                turn = -action[1]
 
             accel = 10.0
 
-            wishmove = self.get_wishmove(action[0], jump)
+            wishmove = self.get_wishmove(act, jump)
+            if turn != 0:
+                new_yaw += turn
+
         else:
             wishmove = self.get_wishmove(action[0], jump)
 
