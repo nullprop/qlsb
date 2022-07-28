@@ -51,6 +51,7 @@ class bot_test(minqlx.Plugin):
         self.add_command("play", self.cmd_play)
         self.add_command("stopplay", self.cmd_stop_play)
         self.add_command("setstart", self.cmd_set_start)
+        self.add_command("addcs", self.cmd_add_cs)
 
     def handle_client_think(self, player, client_cmd):
         return client_cmd
@@ -94,6 +95,28 @@ class bot_test(minqlx.Plugin):
                 self.start_ground_ent,
             )
 
+    def cmd_add_cs(self, player, msg, channel):
+        # magic values that should give 511-512 ups
+        walk_frames = 12
+        strafe_frames = 69
+        strafe_angle = 250
+        try:
+            if len(msg) > 1:
+                walk_frames = int(msg[1])
+        except:
+            pass
+        try:
+            if len(msg) > 2:
+                strafe_frames = int(msg[2])
+        except:
+            pass
+        try:
+            if len(msg) > 3:
+                strafe_angle = int(msg[3])
+        except:
+            pass
+        self.bot.add_cs_start(walk_frames, strafe_frames, strafe_angle)
+
     def handle_frame(self):
         if self.bot is not None:
             if self.bot.run_frame() == False:
@@ -109,6 +132,7 @@ class Actions(IntEnum):
 
 
 TURN_SPEED_MAX = 180
+TURN_SPEED_INTERVAL = 3
 INPUT_FRAME_INTERVAL = 50
 
 
@@ -162,6 +186,12 @@ class StrafeBot(minqlx.Player):
                 0,
                 0,
             ]
+        )
+
+    def add_cs_start(self, walk_frames, strafe_frames, strafe_angle):
+        self.save_next_frame = True
+        self.queued_actions.extend(
+            StrafeBot.get_cs_actions(walk_frames, strafe_frames, strafe_angle)
         )
 
     def start_playback(self):
@@ -282,7 +312,9 @@ class StrafeBot(minqlx.Player):
                     # turning faster is giving less reward, don't bother iterating through remaining angles
                     if self.last_solution[0] == Actions.LEFT:
                         self.last_solution[0] = Actions.RIGHT
-                        self.last_solution[1] = 0  # incremented to 1 below
+                        self.last_solution[
+                            1
+                        ] = 0  # incremented to TURN_SPEED_INTERVAL below
                     elif self.last_solution[1] == Actions.RIGHT:
                         # tried all inputs
                         return self.solve_frame_advance(self.best_solution)
@@ -296,16 +328,16 @@ class StrafeBot(minqlx.Player):
 
         elif self.last_solution[0] == Actions.RIGHT_DIAG:
             self.last_solution[0] = Actions.LEFT
-            self.last_solution[1] = 1
+            self.last_solution[1] = TURN_SPEED_INTERVAL
 
         elif self.last_solution[0] == Actions.LEFT:
-            self.last_solution[1] += 1
+            self.last_solution[1] += TURN_SPEED_INTERVAL
             if self.last_solution[1] > TURN_SPEED_MAX:
                 self.last_solution[0] = Actions.RIGHT
-                self.last_solution[1] = 1
+                self.last_solution[1] = TURN_SPEED_INTERVAL
 
         elif self.last_solution[0] == Actions.RIGHT:
-            self.last_solution[1] += 1
+            self.last_solution[1] += TURN_SPEED_INTERVAL
             if self.last_solution[1] > TURN_SPEED_MAX:
                 # tried all inputs
                 return self.solve_frame_advance(self.best_solution)
@@ -359,7 +391,7 @@ class StrafeBot(minqlx.Player):
 
     def get_reward(self):
         # TODO
-        return self.state.velocity[1] + MathHelper.vec2_len(self.state.velocity)
+        return self.state.velocity[1] + 5.0 * MathHelper.vec2_len(self.state.velocity)
 
     def teleport(self, pos, vel, ang, ground_entity=-1, jump_time=-1, double_jumped=-1):
         minqlx.set_position(self.id, minqlx.Vector3(pos))
@@ -372,6 +404,22 @@ class StrafeBot(minqlx.Player):
         if double_jumped >= 0:
             minqlx.set_double_jumped(self.id, double_jumped)
 
+    @staticmethod
+    def get_cs_actions(walk_frames, strafe_frames, strafe_angle):
+        actions = []
+        total_frames = walk_frames + strafe_frames
+        turn_rate = (125 / strafe_frames) * strafe_angle
+        for i in range(total_frames):
+            actions.append(
+                [
+                    Actions.LEFT,
+                    turn_rate if i >= walk_frames else 0.0,
+                    -math.inf,
+                    False if i < total_frames - 1 else True,
+                ]
+            )
+        return actions
+
     def run_action(self, action):
         max_ground_speed = 320.0
         velocity = self.state.velocity
@@ -380,6 +428,9 @@ class StrafeBot(minqlx.Player):
         jump = (
             grounded and vel_len > max_ground_speed and action[0] != Actions.MAX_ACTION
         )
+        # disallow jump arg, e.g. when circle strafing
+        if len(action) >= 4 and action[3] == False:
+            jump = False
         current_yaw = self.state.viewangles[1]
         new_yaw = current_yaw
         wishmove = None
