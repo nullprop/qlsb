@@ -34,9 +34,6 @@ from pprint import pprint
 
 class bot_test(minqlx.Plugin):
     bot = None
-    start_pos = None
-    start_ang = None
-    start_ground_ent = -1
 
     def __init__(self):
         super().__init__()
@@ -51,6 +48,9 @@ class bot_test(minqlx.Plugin):
         self.add_command("play", self.cmd_play)
         self.add_command("stopplay", self.cmd_stop_play)
         self.add_command("setstart", self.cmd_set_start)
+        self.add_command("setend", self.cmd_set_end)
+        self.add_command("addcp", self.cmd_add_cp)
+        self.add_command("removecp", self.cmd_remove_cp)
         self.add_command("addcs", self.cmd_add_cs)
 
     def handle_client_think(self, player, client_cmd):
@@ -58,12 +58,7 @@ class bot_test(minqlx.Plugin):
 
     def cmd_add(self, player, msg, channel):
         self.bot = StrafeBot(minqlx.bot_add())
-        if self.start_pos != None and self.start_ang != None:
-            self.bot.set_start(
-                self.start_pos,
-                self.start_ang,
-                self.start_ground_ent,
-            )
+        self.bot.set_start()
 
     def cmd_reset(self, player, msg, channel):
         self.bot.reset()
@@ -81,19 +76,21 @@ class bot_test(minqlx.Plugin):
         self.bot.stop_playback()
 
     def cmd_set_start(self, player, msg, channel):
-        self.start_pos = player.state.position
-        self.start_ang = [
-            0,
-            player.state.viewangles[1],
-            0,
-        ]
-        self.start_ground_ent = player.state.ground_entity
+        MapConfig.start_point = Point.from_player(player, "start")
         if self.bot != None:
-            self.bot.set_start(
-                self.start_pos,
-                self.start_ang,
-                self.start_ground_ent,
-            )
+            self.bot.set_start()
+
+    def cmd_set_end(self, player, msg, channel):
+        MapConfig.end_point = Point.from_player(player, "end")
+
+    def cmd_add_cp(self, player, msg, channel):
+        MapConfig.checkpoints.append(
+            Point.from_player(player, "cp{}".format(len(MapConfig.checkpoints)))
+        )
+
+    def cmd_remove_cp(self, player, msg, channel):
+        if len(MapConfig.checkpoints) > 0:
+            MapConfig.checkpoints.pop()
 
     def cmd_add_cs(self, player, msg, channel):
         # magic values that should give 511-512 ups
@@ -121,6 +118,111 @@ class bot_test(minqlx.Plugin):
         if self.bot is not None:
             if self.bot.run_frame() == False:
                 self.bot = None
+
+
+class Point:
+    position = [0, 0, 0]
+    angles = [0, 0, 0]
+    ground_ent = -1
+    name = ""
+
+    def __init__(self, name="") -> None:
+        self.name = name
+
+    @staticmethod
+    def from_player(player, name=""):
+        p = Point(name)
+        p.position = player.state.position
+        p.angles = [
+            0,
+            player.state.viewangles[1],
+            0,
+        ]
+        p.ground_ent = player.state.ground_entity
+        return p
+
+
+class MapConfig:
+    start_point = Point("start")
+    checkpoints = []
+    end_point = Point("end")
+
+    @staticmethod
+    def get_reward(position, velocity):
+        remaining_points = MapConfig.get_remaining_points(position)
+
+        # VELOCITY DIRECTION
+        # TODO lerp direction towards next point.position or
+        # current point.angles (forward) when near the point
+        want_direction = MathHelper.vec3_norm(
+            MathHelper.vec3_sub(remaining_points[0].position, position)
+        )
+        direction_reward = MathHelper.vec_dot(want_direction, velocity, 3)
+
+        # VELOCITY MAGNITUDE
+        velocity_reward = MathHelper.vec2_len(velocity)
+
+        # DISTANCE TO ROUTE
+        previous_point = MapConfig.get_previous_point(remaining_points[0])
+        closest = remaining_points[0]
+        if previous_point != None:
+            closest = MathHelper.line_closest_point_clamped(
+                previous_point.position, remaining_points[0].position, position
+            )
+        distance = MathHelper.vec3_dist(position, closest)
+        distance_reward = 1.0 / distance
+
+        return (
+            #
+            100.0 * distance_reward
+            + 1.0 * direction_reward
+            + 5.0 * velocity_reward
+        )
+
+    # get a list of all the points we haven't passed yet
+    # NOTE: always includes end_zone.point even if past it
+    @staticmethod
+    def get_remaining_points(position):
+        points = [MapConfig.start_point]
+        for cp in MapConfig.checkpoints:
+            points.append(cp)
+        points.append(MapConfig.end_point)
+
+        nearest_index = -1
+        nearest_dist = math.inf
+        for i in range(0, len(points)):
+            dist = MathHelper.vec3_dist(position, points[i].position)
+            if dist < nearest_dist:
+                nearest_dist = dist
+                nearest_index = i
+
+        if nearest_index < len(points) - 1:
+            # are we past nearest point?
+            forward = MathHelper.vec3_sub(
+                points[nearest_index + 1].position, points[nearest_index].position
+            )
+            to_nearest = MathHelper.vec3_sub(points[nearest_index].position, position)
+            if MathHelper.vec_dot(to_nearest, forward, 3) > 0:
+                next_index = nearest_index
+            else:
+                next_index = nearest_index + 1
+        else:
+            next_index = nearest_index
+
+        return points[next_index:]
+
+    @staticmethod
+    def get_previous_point(point):
+        points = [MapConfig.start_point]
+        for cp in MapConfig.checkpoints:
+            points.append(cp)
+        points.append(MapConfig.end_point)
+        for i in range(len(points)):
+            if points[i].name == point.name:
+                if i > 0:
+                    return points[i - 1]
+                break
+        return None
 
 
 class Actions(IntEnum):
@@ -166,23 +268,27 @@ class StrafeBot(minqlx.Player):
         self.best_solution = StrafeBot.empty_solution()
         self.last_solution = StrafeBot.empty_solution()
 
-    def set_start(self, start_pos, start_ang, ground_ent):
+    def set_start(self):
         self.reset()
         self.teleport(
-            start_pos,
+            MapConfig.start_point.position,
             (0, 0, 0),
-            (0, start_ang[1], 0),
-            ground_ent,
+            (0, MapConfig.start_point.angles[1], 0),
+            MapConfig.start_point.ground_ent,
             0,
             0,
         )
         self.history.append(
             [
                 StrafeBot.empty_solution(),
-                [start_pos[0], start_pos[1], start_pos[2]],
+                [
+                    MapConfig.start_point.position[0],
+                    MapConfig.start_point.position[1],
+                    MapConfig.start_point.position[2],
+                ],
                 [0, 0, 0],
-                [0, start_ang[1], 0],
-                ground_ent,
+                [0, MapConfig.start_point.angles[1], 0],
+                MapConfig.start_point.ground_ent,
                 0,
                 0,
             ]
@@ -294,7 +400,9 @@ class StrafeBot(minqlx.Player):
         if self.measure_next_frame == True:
             self.measure_next_frame = False
             old_reward = self.last_solution[2]
-            self.last_solution[2] = self.get_reward()
+            self.last_solution[2] = MapConfig.get_reward(
+                self.state.position, self.state.velocity
+            )
 
             if self.last_solution[2] > self.best_solution[2]:
                 self.best_solution = [
@@ -388,10 +496,6 @@ class StrafeBot(minqlx.Player):
 
     def idle_frame(self):
         return self.run_action([Actions.MAX_ACTION])
-
-    def get_reward(self):
-        # TODO
-        return self.state.velocity[1] + 5.0 * MathHelper.vec2_len(self.state.velocity)
 
     def teleport(self, pos, vel, ang, ground_entity=-1, jump_time=-1, double_jumped=-1):
         minqlx.set_position(self.id, minqlx.Vector3(pos))
@@ -594,25 +698,28 @@ class MathHelper:
 
     @staticmethod
     def vec3_norm(v):
-        len = MathHelper.vec3_len(v)
-        v[0] /= len
-        v[1] /= len
-        v[2] /= len
-        return v
+        a = [v[0], v[1], v[2]]
+        len = MathHelper.vec3_len(a)
+        a[0] /= len
+        a[1] /= len
+        a[2] /= len
+        return a
 
     @staticmethod
     def vec3_add(v, w):
-        v[0] += w[0]
-        v[1] += w[1]
-        v[2] += w[2]
-        return v
+        return [v[0] + w[0], v[1] + w[1], v[2] + w[2]]
+
+    @staticmethod
+    def vec3_sub(v, w):
+        return [v[0] - w[0], v[1] - w[1], v[2] - w[2]]
 
     @staticmethod
     def vec3_scale(v, a):
-        v[0] *= a
-        v[1] *= a
-        v[2] *= a
-        return v
+        return [v[0] * a, v[1] * a, v[2] * a]
+
+    @staticmethod
+    def vec3_dist(v, w):
+        return MathHelper.vec3_len([v[0] - w[0], v[1] - w[1], v[2] - w[2]])
 
     @staticmethod
     def clamp(a, b, c):
@@ -627,3 +734,30 @@ class MathHelper:
         if num >= vel_len:
             return 0
         return math.acos(num / vel_len)
+
+    @staticmethod
+    def line_closest_point(start, end, pos):
+        norm = MathHelper.vec3_norm(MathHelper.vec3_sub(end, start))
+        to_pos = MathHelper.vec3_sub(pos, start)
+        frac = MathHelper.vec_dot(to_pos, norm, 3)
+        return MathHelper.vec3_add(start, MathHelper.vec3_scale(norm, frac))
+
+    @staticmethod
+    def line_closest_point_clamped(start, end, pos):
+        closest = MathHelper.line_closest_point(start, end, pos)
+
+        # closest is a point projected onto the line
+        # and can be outside the line segment, clamp.
+        line_dot = MathHelper.vec_dot(start, end, 3)
+        closest_dot = MathHelper.vec_dot(closest, end, 3)
+
+        if line_dot * closest_dot > 0:
+            # same direction
+            if MathHelper.vec3_dist(start, end) < MathHelper.vec3_dist(closest, end):
+                closest = start
+        else:
+            # opposite
+            if MathHelper.vec3_dist(start, end) < MathHelper.vec3_dist(closest, start):
+                closest = end
+
+        return closest
