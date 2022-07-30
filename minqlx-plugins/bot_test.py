@@ -234,6 +234,12 @@ class MapConfig:
                 break
         return None
 
+    @staticmethod
+    def is_at_end(position):
+        if MathHelper.vec3_dist(position, MapConfig.end_point.position) < 250:
+            return True
+        return False
+
 
 class Actions(IntEnum):
     LEFT_DIAG = 0
@@ -255,6 +261,7 @@ class StrafeBot(minqlx.Player):
     history = []
     playback = False
     solve = False
+    solve_done = False
     best_solution = None
     last_solution = None
     measure_next_frame = False
@@ -273,6 +280,7 @@ class StrafeBot(minqlx.Player):
         self.history = []
         self.playback = False
         self.solve = False
+        self.solve_done = False
         self.measure_next_frame = False
         self.save_next_frame = False
         self.queued_actions = []
@@ -373,6 +381,9 @@ class StrafeBot(minqlx.Player):
         return self.run_action(self.history[self.playback_frame][0])
 
     def run_solve_frame(self):
+        if MapConfig.is_at_end(self.state.position):
+            self.solve_done = True
+
         if len(self.queued_actions) > 0:
             act = self.queued_actions.pop(0)
 
@@ -406,6 +417,12 @@ class StrafeBot(minqlx.Player):
                     self.state.double_jumped,
                 ]
             )
+
+        if self.solve_done == True:
+            print("solve done, reached end")
+            self.solve = False
+            self.solve_done = False
+            return self.idle_frame()
 
         # 1 frame delay so run_action applies new position
         if self.measure_next_frame == True:
