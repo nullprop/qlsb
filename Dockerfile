@@ -33,6 +33,7 @@ USER steam
 ENV HOME /home/steam
 ENV STEAMCMD $HOME/steamcmd
 ENV QLDS $HOME/qlds
+ENV DATA $QLDS/qlsb_data
 
 # Steamcmd
 RUN mkdir $STEAMCMD
@@ -42,6 +43,7 @@ RUN tar -xvzf steamcmd_linux.tar.gz
 
 # qlds
 RUN ./steamcmd.sh +force_install_dir $QLDS +login anonymous +app_update 349090 +quit
+RUN chown steam:steam $QLDS
 
 # minqlx
 COPY --chown=steam:steam minqlx $HOME/minqlx
@@ -58,6 +60,10 @@ RUN python3 -m pip install -r requirements.txt
 
 # server settings
 COPY --chown=steam:steam server-settings $QLDS
+
+# data dir
+RUN mkdir $DATA
+RUN chown steam:steam $DATA
 
 # clean
 RUN \
