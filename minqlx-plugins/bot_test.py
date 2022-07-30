@@ -151,9 +151,19 @@ class MapConfig:
     def get_reward(position, velocity):
         remaining_points = MapConfig.get_remaining_points(position)
 
+        is_end = remaining_points[0].name == "end"
+        if is_end:
+            # Only care about distance, reach end as fast as possible.
+            # Building more speed, etc. don't really matter at this point.
+            # (Assuming last checkpoint is relatively close to the end.)
+            distance = MathHelper.vec3_dist(remaining_points[0].position, position)
+            # Use large constant so bot doesn't choose not to pass last checkpoint,
+            # ideally this should always give more reward than the normal reward function.
+            return 100000.0 + 1.0 / distance
+
         # VELOCITY DIRECTION
         # TODO lerp direction towards next point.position or
-        # current point.angles (forward) when near the point
+        # current point.angles (forward) when near the point?
         want_direction = MathHelper.vec3_norm(
             MathHelper.vec3_sub(remaining_points[0].position, position)
         )
@@ -175,8 +185,8 @@ class MapConfig:
         return (
             #
             100.0 * distance_reward
-            + 1.0 * direction_reward
-            + 5.0 * velocity_reward
+            + 2.0 * direction_reward
+            + 3.0 * velocity_reward
         )
 
     # get a list of all the points we haven't passed yet
@@ -233,9 +243,10 @@ class Actions(IntEnum):
     MAX_ACTION = 4
 
 
-TURN_SPEED_MAX = 180
-TURN_SPEED_INTERVAL = 3
-INPUT_FRAME_INTERVAL = 50
+TURN_SPEED_MAX = 360  # deg/s
+TURN_SPEED_INTERVAL = 15  # deg/s
+TURN_SNAP_ANGLE = 5  # deg
+INPUT_FRAME_INTERVAL = 25  # frames
 
 
 class StrafeBot(minqlx.Player):
@@ -420,11 +431,11 @@ class StrafeBot(minqlx.Player):
                     # turning faster is giving less reward, don't bother iterating through remaining angles
                     if self.last_solution[0] == Actions.LEFT:
                         self.last_solution[0] = Actions.RIGHT
-                        self.last_solution[
-                            1
-                        ] = 0  # incremented to TURN_SPEED_INTERVAL below
-                    elif self.last_solution[1] == Actions.RIGHT:
+                        # incremented to TURN_SPEED_INTERVAL below
+                        self.last_solution[1] = 0
+                    elif self.last_solution[0] == Actions.RIGHT:
                         # tried all inputs
+                        self.last_solution[1] = 0
                         return self.solve_frame_advance(self.best_solution)
 
         # iterate through inputs
@@ -448,6 +459,7 @@ class StrafeBot(minqlx.Player):
             self.last_solution[1] += TURN_SPEED_INTERVAL
             if self.last_solution[1] > TURN_SPEED_MAX:
                 # tried all inputs
+                self.last_solution[1] = 0
                 return self.solve_frame_advance(self.best_solution)
 
         # run the same solution INPUT_FRAME_INTERVAL frames in a row
@@ -552,10 +564,10 @@ class StrafeBot(minqlx.Player):
             turn = 0
             if act == Actions.LEFT:
                 act = Actions.LEFT_DIAG
-                turn = action[1] * frametime
+                turn = float(action[1]) * frametime
             elif act == Actions.RIGHT:
                 act = Actions.RIGHT_DIAG
-                turn = -action[1] * frametime
+                turn = -float(action[1]) * frametime
 
             accel = 10.0
 
@@ -595,13 +607,21 @@ class StrafeBot(minqlx.Player):
             # Turning
             elif action[0] in [Actions.LEFT, Actions.RIGHT]:
                 if vel_len > 0.1:
-                    yaw_change = action[1] * frametime
+                    yaw_change = float(action[1]) * frametime
                     if action[0] == Actions.RIGHT:
                         yaw_change = -yaw_change
                     vel_yaw = MathHelper.get_yaw(
                         [velocity[0], velocity[1], velocity[2]]
                     )
-                    new_yaw = vel_yaw + yaw_change
+                    # Adding to vel_yaw will result in turns that are way too fast.
+                    # (Velocity direction overshoots aim direction when strafing.)
+                    # new_yaw = vel_yaw + yaw_change
+                    # Add the change to current instead, and snap current angle to velocity
+                    # when starting the strafe.
+                    # Assume we're starting the strafe if angle delta is too big.
+                    if abs(MathHelper.yaw_diff(new_yaw, vel_yaw)) > TURN_SNAP_ANGLE:
+                        new_yaw = vel_yaw
+                    new_yaw += yaw_change
 
         # delta required here for bot
         new_yaw = MathHelper.wrap_yaw(new_yaw - self.state.delta_angles[1])
@@ -661,6 +681,15 @@ class MathHelper:
         if norm[1] < 0:
             return -deg
         return deg
+
+    @staticmethod
+    def yaw_diff(a, b):
+        d = (a + 180) - (b + 180)
+        while d > 180:
+            d -= 360
+        while d < -180:
+            d += 360
+        return d
 
     @staticmethod
     def get_forward(yaw):
