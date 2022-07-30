@@ -25,11 +25,13 @@ A sample plugin for hooking ClientThink and modifying client_cmd.
 import minqlx
 
 # python
+import os
 import time
 import math
 import random
 from enum import IntEnum
 from pprint import pprint
+import pickle
 
 
 class bot_test(minqlx.Plugin):
@@ -52,6 +54,9 @@ class bot_test(minqlx.Plugin):
         self.add_command("addcp", self.cmd_add_cp)
         self.add_command("removecp", self.cmd_remove_cp)
         self.add_command("addcs", self.cmd_add_cs)
+        self.add_command("bothaste", self.cmd_haste)
+        self.add_command("savecfg", self.cmd_save_config)
+        self.add_command("loadcfg", self.cmd_load_config)
 
     def handle_client_think(self, player, client_cmd):
         return client_cmd
@@ -114,6 +119,22 @@ class bot_test(minqlx.Plugin):
             pass
         self.bot.add_cs_start(walk_frames, strafe_frames, strafe_angle)
 
+    def cmd_haste(self, player, msg, channel):
+        MapConfig.haste = True if MapConfig.haste == False else False
+        print("set haste to ", MapConfig.haste)
+
+    def cmd_save_config(self, player, msg, channel):
+        if len(msg) <= 1:
+            print("missing name")
+            return
+        MapConfig.save_config(msg[1])
+
+    def cmd_load_config(self, player, msg, channel):
+        if len(msg) <= 1:
+            print("missing name")
+            return
+        MapConfig.load_config(msg[1])
+
     def handle_frame(self):
         if self.bot is not None:
             if self.bot.run_frame() == False:
@@ -132,7 +153,12 @@ class Point:
     @staticmethod
     def from_player(player, name=""):
         p = Point(name)
-        p.position = player.state.position
+        # can't pickle Vector3
+        p.position = [
+            player.state.position[0],
+            player.state.position[1],
+            player.state.position[2],
+        ]
         p.angles = [
             0,
             player.state.viewangles[1],
@@ -146,6 +172,7 @@ class MapConfig:
     start_point = Point("start")
     checkpoints = []
     end_point = Point("end")
+    haste = False
 
     @staticmethod
     def get_reward(position, velocity):
@@ -174,7 +201,7 @@ class MapConfig:
 
         # DISTANCE TO ROUTE
         previous_point = MapConfig.get_previous_point(remaining_points[0])
-        closest = remaining_points[0]
+        closest = remaining_points[0].position
         if previous_point != None:
             closest = MathHelper.line_closest_point_clamped(
                 previous_point.position, remaining_points[0].position, position
@@ -240,6 +267,36 @@ class MapConfig:
             return True
         return False
 
+    @staticmethod
+    def save_config(name=""):
+        if len(name) < 0:
+            print("save_config invalid name")
+            return
+        cfg = {
+            "start": MapConfig.start_point,
+            "end": MapConfig.end_point,
+            "checkpoints": MapConfig.checkpoints,
+            "haste": MapConfig.haste,
+        }
+        name = "qlsb_data/" + name
+        with open(name, mode="wb") as file:
+            pickle.dump(cfg, file)
+            print("saved config ", name)
+
+    @staticmethod
+    def load_config(name=""):
+        if len(name) < 0:
+            print("save_config invalid name")
+            return
+        name = "qlsb_data/" + name
+        with open(name, mode="rb") as file:
+            cfg = pickle.load(file)
+            MapConfig.start_point = cfg["start"]
+            MapConfig.end_point = cfg["end"]
+            MapConfig.checkpoints = cfg["checkpoints"]
+            MapConfig.haste = cfg["haste"]
+            print("loaded config ", name)
+
 
 class Actions(IntEnum):
     LEFT_DIAG = 0
@@ -252,7 +309,7 @@ class Actions(IntEnum):
 TURN_SPEED_MAX = 360  # deg/s
 TURN_SPEED_INTERVAL = 15  # deg/s
 TURN_SNAP_ANGLE = 5  # deg
-INPUT_FRAME_INTERVAL = 25  # frames
+INPUT_FRAME_INTERVAL = 50  # frames
 
 
 class StrafeBot(minqlx.Player):
@@ -355,6 +412,11 @@ class StrafeBot(minqlx.Player):
         self.solve = False
 
     def run_frame(self):
+        if MapConfig.haste == True and self.state.powerups.haste <= 0:
+            self.powerups(haste=999999)
+        elif MapConfig.haste == False and self.state.powerups.haste >= 0:
+            self.powerups(reset=True)
+
         if self.playback == True:
             return self.run_playback_frame()
         elif self.solve == True:
@@ -541,11 +603,11 @@ class StrafeBot(minqlx.Player):
     def get_cs_actions(walk_frames, strafe_frames, strafe_angle):
         actions = []
         total_frames = walk_frames + strafe_frames
-        turn_rate = (125 / strafe_frames) * strafe_angle
+        turn_rate = (125 / strafe_frames) * abs(strafe_angle)
         for i in range(total_frames):
             actions.append(
                 [
-                    Actions.LEFT,
+                    Actions.LEFT if strafe_angle >= 0 else Actions.RIGHT,
                     turn_rate if i >= walk_frames else 0.0,
                     -math.inf,
                     False if i < total_frames - 1 else True,
