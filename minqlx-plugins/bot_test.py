@@ -451,41 +451,54 @@ class StrafeBot(minqlx.Player):
         return self.run_action(self.history[self.playback_frame][0], False)
 
     def run_solve_frame(self):
-        if MapConfig.is_at_end(self.state.position):
-            self.solve_done = True
+        # Try actions until compute time gets close to actual frametime.
+        # (this will call SV_ClientThink and G_RunFrame
+        # INPUT_FRAME_INTERVAL times for each action)
+        # TODO: needed? could just while(True)?
+        # Is there something in COM_Frame or SV_Frame
+        # that needs to be called every now and then?
+        # (Let a real frame run rather than us calling G_RunFrame directly)
 
-        if self.solve_done == True:
-            print("solve done, reached end")
-            self.solve = False
-            self.solve_done = False
-            return self.idle_frame()
+        start_time = time.time()
+        while time.time() - start_time < 0.9 * (1.0 / 125.0):
+            if MapConfig.is_at_end(self.state.position):
+                self.solve_done = True
 
-        # iterate through inputs
-        if self.last_solution[0] == Actions.MAX_ACTION:
-            self.last_solution[0] = Actions.LEFT_DIAG
+            if self.solve_done == True:
+                print("solve done, reached end")
+                self.solve = False
+                self.solve_done = False
+                return self.idle_frame()
 
-        elif self.last_solution[0] == Actions.LEFT_DIAG:
-            self.last_solution[0] = Actions.RIGHT_DIAG
+            # iterate through inputs
+            if self.last_solution[0] == Actions.MAX_ACTION:
+                self.last_solution[0] = Actions.LEFT_DIAG
 
-        elif self.last_solution[0] == Actions.RIGHT_DIAG:
-            self.last_solution[0] = Actions.LEFT
-            self.last_solution[1] = TURN_SPEED_INTERVAL
+            elif self.last_solution[0] == Actions.LEFT_DIAG:
+                self.last_solution[0] = Actions.RIGHT_DIAG
 
-        elif self.last_solution[0] == Actions.LEFT:
-            self.last_solution[1] += TURN_SPEED_INTERVAL
-            if self.last_solution[1] > TURN_SPEED_MAX:
-                self.last_solution[0] = Actions.RIGHT
+            elif self.last_solution[0] == Actions.RIGHT_DIAG:
+                self.last_solution[0] = Actions.LEFT
                 self.last_solution[1] = TURN_SPEED_INTERVAL
 
-        elif self.last_solution[0] == Actions.RIGHT:
-            self.last_solution[1] += TURN_SPEED_INTERVAL
-            if self.last_solution[1] > TURN_SPEED_MAX:
-                # tried all inputs
-                self.last_solution[1] = 0
-                return self.solve_frame_advance(self.best_solution)
+            elif self.last_solution[0] == Actions.LEFT:
+                self.last_solution[1] += TURN_SPEED_INTERVAL
+                if self.last_solution[1] > TURN_SPEED_MAX:
+                    self.last_solution[0] = Actions.RIGHT
+                    self.last_solution[1] = TURN_SPEED_INTERVAL
 
-        # run the same solution INPUT_FRAME_INTERVAL frames in a row
-        return self.solve_frame_measure()
+            elif self.last_solution[0] == Actions.RIGHT:
+                self.last_solution[1] += TURN_SPEED_INTERVAL
+                if self.last_solution[1] > TURN_SPEED_MAX:
+                    # tried all inputs
+                    self.last_solution[1] = 0
+                    self.solve_frame_advance(self.best_solution)
+                    continue
+
+            # run the same solution INPUT_FRAME_INTERVAL frames in a row
+            self.solve_frame_measure()
+
+        return True
 
     def solve_frame_measure(self):
         self.teleport(
