@@ -62,8 +62,8 @@ class bot_test(minqlx.Plugin):
         return client_cmd
 
     def cmd_add(self, player, msg, channel):
-        self.bot = StrafeBot(minqlx.bot_add())
-        self.bot.set_start()
+        self.bot = StrafeBot(minqlx.bot_add(1))
+        self.bot.reset()
 
     def cmd_reset(self, player, msg, channel):
         self.bot.reset()
@@ -83,7 +83,7 @@ class bot_test(minqlx.Plugin):
     def cmd_set_start(self, player, msg, channel):
         MapConfig.start_point = Point.from_player(player, "start")
         if self.bot != None:
-            self.bot.set_start()
+            self.bot.reset()
 
     def cmd_set_end(self, player, msg, channel):
         MapConfig.end_point = Point.from_player(player, "end")
@@ -98,7 +98,7 @@ class bot_test(minqlx.Plugin):
             MapConfig.checkpoints.pop()
 
     def cmd_add_cs(self, player, msg, channel):
-        # magic values that should give 511-512 ups
+        # magic values that should give 511-512 ups without haste
         walk_frames = 12
         strafe_frames = 69
         strafe_angle = 250
@@ -321,9 +321,6 @@ class StrafeBot(minqlx.Player):
     solve_done = False
     best_solution = None
     last_solution = None
-    measure_next_frame = False
-    save_next_frame = False
-    queued_actions = []
 
     def __init__(self, client_id):
         super().__init__(client_id)
@@ -338,14 +335,11 @@ class StrafeBot(minqlx.Player):
         self.playback = False
         self.solve = False
         self.solve_done = False
-        self.measure_next_frame = False
-        self.save_next_frame = False
-        self.queued_actions = []
         self.best_solution = StrafeBot.empty_solution()
         self.last_solution = StrafeBot.empty_solution()
+        self.teleport_to_start()
 
-    def set_start(self):
-        self.reset()
+    def teleport_to_start(self):
         self.teleport(
             MapConfig.start_point.position,
             (0, 0, 0),
@@ -371,9 +365,23 @@ class StrafeBot(minqlx.Player):
         )
 
     def add_cs_start(self, walk_frames, strafe_frames, strafe_angle):
-        self.save_next_frame = True
-        self.queued_actions.extend(
-            StrafeBot.get_cs_actions(walk_frames, strafe_frames, strafe_angle)
+        actions = StrafeBot.get_cs_actions(walk_frames, strafe_frames, strafe_angle)
+        for act in actions:
+            self.save_frame(act)
+            self.run_action(act)
+        self.save_frame(StrafeBot.empty_solution())
+
+    def save_frame(self, act):
+        self.history.append(
+            [
+                act,
+                self.state.position,
+                self.state.velocity,
+                self.state.viewangles,
+                self.state.ground_entity,
+                self.state.jump_time,
+                self.state.double_jumped,
+            ]
         )
 
     def start_playback(self):
@@ -440,82 +448,17 @@ class StrafeBot(minqlx.Player):
             self.history[self.playback_frame][6],
         )
 
-        return self.run_action(self.history[self.playback_frame][0])
+        return self.run_action(self.history[self.playback_frame][0], False)
 
     def run_solve_frame(self):
         if MapConfig.is_at_end(self.state.position):
             self.solve_done = True
-
-        if len(self.queued_actions) > 0:
-            act = self.queued_actions.pop(0)
-
-            if self.save_next_frame == True:
-                # store history for each past frame in INPUT_FRAME_INTERVAL
-                self.history.append(
-                    [
-                        act,
-                        self.state.position,
-                        self.state.velocity,
-                        self.state.viewangles,
-                        self.state.ground_entity,
-                        self.state.jump_time,
-                        self.state.double_jumped,
-                    ]
-                )
-
-            return self.run_action(act)
-
-        # 1 frame delay so run_action applies new position
-        if self.save_next_frame == True:
-            self.save_next_frame = False
-            self.history.append(
-                [
-                    StrafeBot.empty_solution(),
-                    self.state.position,
-                    self.state.velocity,
-                    self.state.viewangles,
-                    self.state.ground_entity,
-                    self.state.jump_time,
-                    self.state.double_jumped,
-                ]
-            )
 
         if self.solve_done == True:
             print("solve done, reached end")
             self.solve = False
             self.solve_done = False
             return self.idle_frame()
-
-        # 1 frame delay so run_action applies new position
-        if self.measure_next_frame == True:
-            self.measure_next_frame = False
-            old_reward = self.last_solution[2]
-            self.last_solution[2] = MapConfig.get_reward(
-                self.state.position, self.state.velocity
-            )
-
-            if self.last_solution[2] > self.best_solution[2]:
-                self.best_solution = [
-                    self.last_solution[0],
-                    self.last_solution[1],
-                    self.last_solution[2],
-                ]
-
-            # were we turning?
-            if old_reward > self.last_solution[2] and self.last_solution[0] in [
-                Actions.LEFT,
-                Actions.RIGHT,
-            ]:
-                if self.last_solution[1] > TURN_SPEED_INTERVAL:
-                    # turning faster is giving less reward, don't bother iterating through remaining angles
-                    if self.last_solution[0] == Actions.LEFT:
-                        self.last_solution[0] = Actions.RIGHT
-                        # incremented to TURN_SPEED_INTERVAL below
-                        self.last_solution[1] = 0
-                    elif self.last_solution[0] == Actions.RIGHT:
-                        # tried all inputs
-                        self.last_solution[1] = 0
-                        return self.solve_frame_advance(self.best_solution)
 
         # iterate through inputs
         if self.last_solution[0] == Actions.MAX_ACTION:
@@ -553,11 +496,38 @@ class StrafeBot(minqlx.Player):
             self.history[-1][5],
             self.history[-1][6],
         )
-        self.measure_next_frame = True
-        for i in range(INPUT_FRAME_INTERVAL - 1):
-            self.queued_actions.append(self.last_solution)
-        success = self.run_action(self.last_solution)
-        return success
+        for i in range(INPUT_FRAME_INTERVAL):
+            self.run_action(self.last_solution)
+
+        old_reward = self.last_solution[2]
+        self.last_solution[2] = MapConfig.get_reward(
+            self.state.position, self.state.velocity
+        )
+
+        if self.last_solution[2] > self.best_solution[2]:
+            self.best_solution = [
+                self.last_solution[0],
+                self.last_solution[1],
+                self.last_solution[2],
+            ]
+
+        # were we turning?
+        if old_reward > self.last_solution[2] and self.last_solution[0] in [
+            Actions.LEFT,
+            Actions.RIGHT,
+        ]:
+            if self.last_solution[1] > TURN_SPEED_INTERVAL:
+                # turning faster is giving less reward, don't bother iterating through remaining angles
+                if self.last_solution[0] == Actions.LEFT:
+                    self.last_solution[0] = Actions.RIGHT
+                    # incremented to TURN_SPEED_INTERVAL below
+                    self.last_solution[1] = 0
+                elif self.last_solution[0] == Actions.RIGHT:
+                    # tried all inputs
+                    self.last_solution[1] = 0
+                    return self.solve_frame_advance(self.best_solution)
+
+        return True
 
     def solve_frame_advance(self, solution):
         self.history[-1][0] = solution
@@ -577,16 +547,15 @@ class StrafeBot(minqlx.Player):
                 solution[2],
             )
         )
-        self.save_next_frame = True
-        success = self.run_action(solution)
         self.last_solution = StrafeBot.empty_solution()
         self.best_solution = StrafeBot.empty_solution()
-        for i in range(INPUT_FRAME_INTERVAL - 1):
-            self.queued_actions.append(solution)
-        return success
+        for i in range(INPUT_FRAME_INTERVAL):
+            self.run_action(solution)
+            self.save_frame(solution)
+        return True
 
     def idle_frame(self):
-        return self.run_action([Actions.MAX_ACTION])
+        return self.run_action([Actions.MAX_ACTION], False)
 
     def teleport(self, pos, vel, ang, ground_entity=-1, jump_time=-1, double_jumped=-1):
         minqlx.set_position(self.id, minqlx.Vector3(pos))
@@ -615,7 +584,7 @@ class StrafeBot(minqlx.Player):
             )
         return actions
 
-    def run_action(self, action):
+    def run_action(self, action, immediate=True):
         max_ground_speed = 320.0
         velocity = self.state.velocity
         vel_len = MathHelper.vec2_len(velocity)
@@ -717,7 +686,11 @@ class StrafeBot(minqlx.Player):
             "rightmove": wishmove[1],
             "upmove": wishmove[2],
         }
-        return minqlx.client_think(self.id, cmd)
+        success = minqlx.client_think(
+            self.id, cmd, 8 if immediate == True else 0  # 1000 / 125
+        )
+
+        return success
 
     def get_wishmove(self, action, jump):
         speed = 127

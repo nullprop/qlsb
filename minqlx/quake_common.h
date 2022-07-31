@@ -1543,6 +1543,7 @@ typedef void (__cdecl *SV_SpawnServer_ptr)(char* server, qboolean killBots);
 typedef void (__cdecl *Cmd_ExecuteString_ptr)(const char* text);
 typedef int (__cdecl *SV_BotAllocateClient_ptr)(void);
 typedef void (__cdecl *SV_BotFreeClient_ptr)(int clientNum);
+typedef void (__cdecl *SV_Frame_ptr)(int msec);
 // VM functions.
 typedef void (__cdecl *G_RunFrame_ptr)(int time);
 typedef void (__cdecl *G_AddEvent_ptr)(gentity_t* ent, int event, int eventParm);
@@ -1552,6 +1553,7 @@ typedef char* (__cdecl *ClientConnect_ptr)(int clientNum, qboolean firstTime, qb
 typedef void (__cdecl *ClientSpawn_ptr)(gentity_t* ent);
 typedef void (__cdecl *ClientUserinfoChanged_ptr)(int clientNum);
 typedef void (__cdecl *ClientBegin_ptr)(int clientNum);
+typedef void (__cdecl *ClientEndFrame_ptr)(gentity_t *ent);
 typedef void (__cdecl *Cmd_CallVote_f_ptr)(gentity_t *ent);
 typedef void (__cdecl *G_Damage_ptr)(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, int mod);
 typedef void (__cdecl *Touch_Item_ptr)(gentity_t *ent, gentity_t *other, trace_t *trace);
@@ -1587,6 +1589,7 @@ extern SV_SpawnServer_ptr SV_SpawnServer;
 extern Cmd_ExecuteString_ptr Cmd_ExecuteString;
 extern SV_BotAllocateClient_ptr SV_BotAllocateClient;
 extern SV_BotFreeClient_ptr SV_BotFreeClient;
+extern SV_Frame_ptr SV_Frame;
 // VM functions.
 extern G_RunFrame_ptr G_RunFrame;
 extern G_AddEvent_ptr G_AddEvent;
@@ -1596,6 +1599,7 @@ extern ClientConnect_ptr ClientConnect;
 extern ClientSpawn_ptr ClientSpawn;
 extern ClientUserinfoChanged_ptr ClientUserinfoChanged;
 extern ClientBegin_ptr ClientBegin;
+extern ClientEndFrame_ptr ClientEndFrame;
 extern Cmd_CallVote_f_ptr Cmd_CallVote_f;
 extern G_Damage_ptr G_Damage;
 extern Touch_Item_ptr Touch_Item;

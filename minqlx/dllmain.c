@@ -56,6 +56,7 @@ SV_SpawnServer_ptr SV_SpawnServer;
 Cmd_ExecuteString_ptr Cmd_ExecuteString;
 SV_BotAllocateClient_ptr SV_BotAllocateClient;
 SV_BotFreeClient_ptr SV_BotFreeClient;
+SV_Frame_ptr SV_Frame;
 
 // VM functions
 G_RunFrame_ptr G_RunFrame;
@@ -66,6 +67,7 @@ ClientConnect_ptr ClientConnect;
 ClientSpawn_ptr ClientSpawn;
 ClientUserinfoChanged_ptr ClientUserinfoChanged;
 ClientBegin_ptr ClientBegin;
+ClientEndFrame_ptr ClientEndFrame;
 G_Damage_ptr G_Damage;
 Touch_Item_ptr Touch_Item;
 LaunchItem_ptr LaunchItem;
@@ -139,6 +141,7 @@ static void SearchFunctions(void) {
 	STATIC_SEARCH(Cmd_ExecuteString, PTRN_CMD_EXECUTESTRING, MASK_CMD_EXECUTESTRING);
 	STATIC_SEARCH(SV_BotAllocateClient, PTRN_SV_BOTALLOCATECLIENT, MASK_SV_BOTALLOCATECLIENT);
 	STATIC_SEARCH(SV_BotFreeClient, PTRN_SV_BOTFREECLIENT, MASK_SV_BOTFREECLIENT);
+	STATIC_SEARCH(SV_Frame, PTRN_SV_FRAME, MASK_SV_FRAME);
 
 	// Cmd_Argc is really small, making it hard to search for, so we use a reference to it instead.
 	if (SV_Map_f != NULL) {
@@ -173,6 +176,7 @@ void SearchVmFunctions(void) {
 	VM_SEARCH(G_StartKamikaze, PTRN_G_STARTKAMIKAZE, MASK_G_STARTKAMIKAZE);
 	VM_SEARCH(G_FreeEntity, PTRN_G_FREEENTITY, MASK_G_FREEENTITY);
 	VM_SEARCH(SetTeam, PTRN_SETTEAM, MASK_SETTEAM);
+	VM_SEARCH(ClientEndFrame, PTRN_CLIENTENDFRAME, MASK_CLIENTENDFRAME);
 
 	if (failed) {
 			DebugPrint("Exiting.\n");

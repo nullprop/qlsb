@@ -350,7 +350,8 @@ static PyObject *PyMinqlx_ClientThink(PyObject *self, PyObject *args)
 {
     int client_id;
     PyObject *obj;
-    if (!PyArg_ParseTuple(args, "iO:client_think", &client_id, &obj))
+    int run_frame;
+    if (!PyArg_ParseTuple(args, "iOi:client_think", &client_id, &obj, &run_frame))
     {
         Py_RETURN_FALSE;
     }
@@ -399,7 +400,44 @@ static PyObject *PyMinqlx_ClientThink(PyObject *self, PyObject *args)
     } else {
         My_SV_ClientThink(&svs->clients[client_id], &cmd);
     }
+
+    // Force a new frame so bot action is instant
+    if (run_frame > 0) {
+        svs->time += run_frame;
+        G_RunFrame(svs->time);
+    }
     
+    Py_RETURN_TRUE;
+}
+
+/*
+ * ================================================================
+ *                          client_end_frame
+ * ================================================================
+ */
+
+static PyObject *PyMinqlx_ClientEndFrame(PyObject *self, PyObject *args)
+{
+    int client_id;
+    if (!PyArg_ParseTuple(args, "i:client_end_frame", &client_id))
+    {
+        Py_RETURN_FALSE;
+    }
+    else if (client_id < 0 || client_id >= sv_maxclients->integer)
+    {
+        PyErr_Format(PyExc_ValueError,
+                     "client_id needs to be a number from 0 to %d.",
+                     sv_maxclients->integer);
+        Py_RETURN_FALSE;
+    }
+    else if (svs->clients[client_id].state == CS_FREE)
+    {
+        DebugPrint("WARNING: PyMinqlx_ClientEndFrame called for CS_FREE client %d.\n", client_id);
+        Py_RETURN_FALSE;
+    }
+
+    ClientEndFrame(&g_entities[client_id]);
+
     Py_RETURN_TRUE;
 }
 
@@ -423,19 +461,30 @@ static PyObject* PyMinqlx_SetTeam(PyObject* self, PyObject* args) {
  * ================================================================
 */
 
-static PyObject* PyMinqlx_BotAdd(PyObject* self, PyObject* args) {
+static PyObject *PyMinqlx_BotAdd(PyObject *self, PyObject *args)
+{
     int id = SV_BotAllocateClient();
+    int flag_as_bot;
+    if (!PyArg_ParseTuple(args, "i:bot_add", &flag_as_bot))
+        return NULL;
 
-    if (id >= 0) {
+    if (id >= 0)
+    {
         gentity_t *bot = &g_entities[id];
-        bot->r.svFlags |= SVF_BOT;
+        // Can flag as not bot so we can call
+        // ClientThink -> ClientThink_real multiple times per frame.
+        // (Compare ClientThink and G_RunClient in q3a)
+        if (flag_as_bot == 1)
+            bot->r.svFlags |= SVF_BOT;
+        else
+            bot->r.svFlags &= ~SVF_BOT;
         bot->inuse = 1;
         char *info = "name\\TestBot"
-            "\\model\\bones/bones\\hmodel\\sarge" // bones model taken from player
-            "\\c1\\25\\c2\\25\\hc\\100" // not sure what these are
-            "\\w\\0\\l\\0\\tt\\0\\tl\\0\\rp\\0\\p\\0\\so\\0\\pq\\0" // or these
-            "\\t\\0" // team red
-            "\\skill\\0\\c\\FI";
+                     "\\model\\bones/bones\\hmodel\\sarge"                   // bones model taken from player
+                     "\\c1\\25\\c2\\25\\hc\\100"                             // not sure what these are
+                     "\\w\\0\\l\\0\\tt\\0\\tl\\0\\rp\\0\\p\\0\\so\\0\\pq\\0" // or these
+                     "\\t\\0"                                                // team red
+                     "\\skill\\0\\c\\FI";
         strcpy(svs->clients[id].userinfo, info);
         ClientUserinfoChanged(id);
         ClientConnect(id, 1, 0); // isBot = 0 so we don't crash with no .AAS info
@@ -468,6 +517,21 @@ static PyObject* PyMinqlx_BotFreeClient(PyObject* self, PyObject* args) {
         return NULL;
 
     SV_BotFreeClient(i);
+    Py_RETURN_NONE;
+}
+
+/*
+ * ================================================================
+ *                          sv_frame
+ * ================================================================
+*/
+
+static PyObject* PyMinqlx_SVFrame(PyObject* self, PyObject* args) {
+    int msec;
+    if (!PyArg_ParseTuple(args, "i:sv_frame", &msec))
+        return NULL;
+
+    SV_Frame(msec);
     Py_RETURN_NONE;
 }
 
@@ -2021,14 +2085,18 @@ static PyMethodDef minqlxMethods[] = {
 	 "Returns a string with a player's userinfo."},
     {"client_think", PyMinqlx_ClientThink, METH_VARARGS,
 	 "Invoke ClientThink. Used for custom bots."},
+    {"client_end_frame", PyMinqlx_ClientEndFrame, METH_VARARGS,
+	 "Invoke ClientEndFrame. Used for custom bots."},
     {"set_team", PyMinqlx_SetTeam, METH_VARARGS,
 	 "Set client team."},
-    {"bot_add", PyMinqlx_BotAdd, METH_NOARGS,
+    {"bot_add", PyMinqlx_BotAdd, METH_VARARGS,
 	 "Try to add and spawn a bot client. Returns -1 on failure."},
     {"bot_allocate_client", PyMinqlx_BotAllocateClient, METH_NOARGS,
 	 "Try to allocate a client entity. Returns -1 on failure."},
     {"bot_free_client", PyMinqlx_BotAllocateClient, METH_VARARGS,
 	 "Free a client entity by id."},
+    {"sv_frame", PyMinqlx_SVFrame, METH_VARARGS,
+	 "Run a server frame."},
     {"send_server_command", PyMinqlx_SendServerCommand, METH_VARARGS,
      "Sends a server command to either one specific client or all the clients."},
 	{"client_command", PyMinqlx_ClientCommand, METH_VARARGS,

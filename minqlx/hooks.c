@@ -466,7 +466,7 @@ void HookVm(void) {
 		DebugPrint("ERROR: Failed to hook ClientConnect: %d\n", res);
 		failed = 1;
 	}
-  count++;
+    count++;
 
     res = Hook((void*)G_StartKamikaze, My_G_StartKamikaze, (void*)&G_StartKamikaze);
     if (res) {
