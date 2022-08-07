@@ -309,7 +309,7 @@ class Actions(IntEnum):
 TURN_SPEED_MAX = 360  # deg/s
 TURN_SPEED_INTERVAL = 15  # deg/s
 TURN_SNAP_ANGLE = 5  # deg
-INPUT_FRAME_INTERVAL = 50  # frames
+INPUT_FRAME_INTERVAL = 50  # frames per action
 
 
 class StrafeBot(minqlx.Player):
@@ -454,10 +454,7 @@ class StrafeBot(minqlx.Player):
         # Try actions until compute time gets close to actual frametime.
         # (this will call SV_ClientThink and G_RunFrame
         # INPUT_FRAME_INTERVAL times for each action)
-        # TODO: needed? could just while(True)?
-        # Is there something in COM_Frame or SV_Frame
-        # that needs to be called every now and then?
-        # (Let a real frame run rather than us calling G_RunFrame directly)
+        # Need to run a real COM_Frame/SV_Frame every now and then to not freeze server.
 
         start_time = time.time()
         while time.time() - start_time < 0.9 * (1.0 / 125.0):
@@ -585,7 +582,7 @@ class StrafeBot(minqlx.Player):
     def get_cs_actions(walk_frames, strafe_frames, strafe_angle):
         actions = []
         total_frames = walk_frames + strafe_frames
-        turn_rate = (125 / strafe_frames) * abs(strafe_angle)
+        turn_rate = (125.0 / strafe_frames) * abs(strafe_angle)
         for i in range(total_frames):
             actions.append(
                 [
