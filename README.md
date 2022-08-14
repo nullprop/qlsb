@@ -1,5 +1,9 @@
 # qlsb
 
+A work-in-progress Quake Live strafe bot for defrag (PQL).
+
+![WIP game footage of bot](https://raw.githubusercontent.com/laurirasanen/qlsb/docs/20220731-dfwc2017-6.mp4)
+
 ## Docker
 
 Note: QL Client binds port 27960. Using the same (host) port in Docker will cause connections to fail silently.
