@@ -136,9 +136,9 @@
 # 801283348 # aa_shorty2
 # 805817131 # xt4zy_nextone
 # 806821616 # jRNG
-# 808465963 # daanstrafe01
-# 808360370 # stonestrafe2
-# 809614969 # daanstrafe02
+808465963 # daanstrafe01
+808360370 # stonestrafe2
+809614969 # daanstrafe02
 # 810579314 # r7_golem
 2100160353 # dfwc2017
 1942761874 # tux_purestrafe 
