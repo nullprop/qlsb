@@ -309,7 +309,7 @@ class Actions(IntEnum):
 TURN_SPEED_MAX = 360  # deg/s
 TURN_SPEED_INTERVAL = 15  # deg/s
 TURN_SNAP_ANGLE = 5  # deg
-INPUT_FRAME_INTERVAL = 50  # frames per action
+INPUT_FRAME_INTERVAL = 25  # frames per action
 
 
 class StrafeBot(minqlx.Player):
