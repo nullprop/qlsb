@@ -51,6 +51,7 @@ class bot_test(minqlx.Plugin):
         self.add_command("stopplay", self.cmd_stop_play)
         self.add_command("setstart", self.cmd_set_start)
         self.add_command("setend", self.cmd_set_end)
+        self.add_command("setenddist", self.cmd_set_end_dist)
         self.add_command("addcp", self.cmd_add_cp)
         self.add_command("removecp", self.cmd_remove_cp)
         self.add_command("addcs", self.cmd_add_cs)
@@ -87,6 +88,12 @@ class bot_test(minqlx.Plugin):
 
     def cmd_set_end(self, player, msg, channel):
         MapConfig.end_point = Point.from_player(player, "end")
+    
+    def cmd_set_end_dist(self, player, msg, channel):
+        if len(msg) > 1:
+            MapConfig.end_dist = int(msg[1])
+        else:
+            MapConfig.end_dist = 250
 
     def cmd_add_cp(self, player, msg, channel):
         MapConfig.checkpoints.append(
@@ -98,7 +105,8 @@ class bot_test(minqlx.Plugin):
             MapConfig.checkpoints.pop()
 
     def cmd_add_cs(self, player, msg, channel):
-        # magic values that should give 511-512 ups without haste
+        # magic values that should give 511-512 ups without haste.
+        # for haste try 12 40 -150 (dfwc2017-6)
         walk_frames = 12
         strafe_frames = 69
         strafe_angle = 250
@@ -172,6 +180,7 @@ class MapConfig:
     start_point = Point("start")
     checkpoints = []
     end_point = Point("end")
+    end_dist = 250
     haste = False
 
     @staticmethod
@@ -263,7 +272,7 @@ class MapConfig:
 
     @staticmethod
     def is_at_end(position):
-        if MathHelper.vec3_dist(position, MapConfig.end_point.position) < 250:
+        if MathHelper.vec3_dist(position, MapConfig.end_point.position) < MapConfig.end_dist:
             return True
         return False
 
@@ -276,6 +285,7 @@ class MapConfig:
             "start": MapConfig.start_point,
             "end": MapConfig.end_point,
             "checkpoints": MapConfig.checkpoints,
+            "end_dist": MapConfig.end_dist,
             "haste": MapConfig.haste,
         }
         name = "qlsb_data/" + name
@@ -294,6 +304,7 @@ class MapConfig:
             MapConfig.start_point = cfg["start"]
             MapConfig.end_point = cfg["end"]
             MapConfig.checkpoints = cfg["checkpoints"]
+            MapConfig.end_dist = cfg["end_dist"]
             MapConfig.haste = cfg["haste"]
             print("loaded config ", name)
 
